@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#12100d">
+<title>拾光壁纸 · 每天一张好心情</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>document.documentElement.classList.add('js');</script>
+<style>
+  :root {
+    --bg: #12100d;
+    --surface: #1d1915;
+    --card: #272019;
+    --ink: #f3ead9;
+    --ink-72: rgba(243, 234, 217, 0.72);
+    --ink-52: rgba(243, 234, 217, 0.52);
+    --acc: #d9a862;
+    --acc-soft: rgba(217, 168, 98, 0.16);
+    --teal: #d9a862;
+    --line: rgba(243, 234, 217, 0.14);
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --serif: 'ZCOOL XiaoWei', 'STSong', serif;
+    --sans: 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', monospace;
+    --wall: none;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { background: #060509; display: flex; justify-content: center; font-family: var(--sans); -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+  button, input, a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; font-family: var(--sans); }
+  :focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+
+  .app {
+    position: relative; width: min(430px, 100vw);
+    height: 100vh; height: 100dvh;
+    background: var(--bg); color: var(--ink);
+    overflow: hidden;
+  }
+  @media (min-width: 500px) { .app { box-shadow: 0 0 0 1px rgba(242,237,245,0.08), 0 30px 90px rgba(0,0,0,0.8); } }
+
+  /* ===== 应用背景壁纸层(设为壁纸后显示) ===== */
+  .wall-layer {
+    position: absolute; inset: 0; z-index: 0;
+    background: var(--wall); background-size: cover;
+    opacity: 0; transition: opacity 0.8s var(--ease);
+    pointer-events: none;
+  }
+  .wall-layer.on { opacity: 0.22; }
+  .wall-veil { position: absolute; inset: 0; z-index: 1; background: rgba(16, 13, 19, 0.42); opacity: 0; transition: opacity 0.8s var(--ease); pointer-events: none; }
+  .wall-veil.on { opacity: 1; }
+
+  /* ===== ⑥ 启动屏 ===== */
+  .boot {
+    position: absolute; inset: 0; z-index: 500;
+    background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+    transition: opacity 0.7s var(--ease), visibility 0.7s;
+  }
+  .boot.done { opacity: 0; visibility: hidden; pointer-events: none; }
+  .boot-mark {
+    width: 118px; height: 118px; border-radius: 50%;
+    border: 2px solid var(--acc);
+    box-shadow: 0 0 0 6px rgba(217, 168, 98, 0.08), inset 0 0 30px rgba(217, 168, 98, 0.08);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--serif); font-size: 56px; color: var(--acc);
+    transform: scale(0.4); opacity: 0;
+  }
+  .js .boot.play .boot-mark { animation: markIn 0.7s var(--spring) forwards; }
+  @keyframes markIn { to { transform: scale(1); opacity: 1; } }
+  .boot-name { font-family: var(--serif); font-size: 30px; letter-spacing: 0.3em; opacity: 0; }
+  .js .boot.play .boot-name { animation: fadeUpB 0.7s var(--ease) 0.5s forwards; }
+  .boot-slogan { font-family: var(--mono); font-size: 10px; letter-spacing: 0.32em; color: var(--ink-52); opacity: 0; }
+  .js .boot.play .boot-slogan { animation: fadeUpB 0.7s var(--ease) 0.8s forwards; }
+  @keyframes fadeUpB { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+
+  /* ===== 页面 ===== */
+  .screen {
+    position: absolute; inset: 0;
+    padding-bottom: 112px;
+    overflow-y: auto; overflow-x: hidden;
+    -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;
+    opacity: 0; visibility: hidden;
+    transition: opacity 0.35s var(--ease);
+    z-index: 10;
+  }
+  .screen.active { opacity: 1; visibility: visible; }
+
+  /* ===== 首页头部(① 视差) ===== */
+  .home-head { position: relative; padding: 64px 20px 18px; overflow: hidden; }
+  .head-inner { position: relative; z-index: 2; will-change: transform, opacity; }
+  .search-fab {
+    position: absolute; top: 62px; right: 20px; width: 48px; height: 48px;
+    border-radius: 50%; border: 1px solid var(--line); background: var(--surface);
+    color: var(--ink); cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: transform 0.3s var(--spring), border-color 0.2s ease;
+  }
+  .search-fab:active { transform: scale(0.88); }
+  .search-fab:hover { border-color: var(--acc); color: var(--acc); }
+  .hi { font-family: var(--mono); font-size: 10px; letter-spacing: 0.32em; color: var(--acc); margin-bottom: 12px; }
+  .head-title { font-family: var(--serif); font-size: 34px; letter-spacing: 0.08em; line-height: 1.34; }
+  .head-title em { font-style: normal; color: var(--acc); }
+
+  /* ⑰ 打字机 */
+  .tw-line { margin-top: 14px; min-height: 42px; font-size: 13px; color: var(--ink-72); line-height: 1.8; }
+  .tw-caret { display: inline-block; width: 2px; height: 1em; background: var(--teal); vertical-align: text-bottom; animation: blink 0.8s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ⑧ 数字 */
+  .today { margin: 18px 20px 0; padding: 18px 22px; border: 1px solid var(--line); border-radius: 16px; display: flex; align-items: baseline; gap: 14px; background: var(--surface); }
+  .today-num { font-family: var(--serif); font-size: 42px; color: var(--acc); font-variant-numeric: tabular-nums; line-height: 1; }
+  .today-label { font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em; color: var(--ink-52); text-transform: uppercase; }
+
+  /* ===== 筛选 chips(可选组件) ===== */
+  .chips { display: flex; gap: 10px; padding: 20px 20px 14px; overflow-x: auto; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip {
+    flex-shrink: 0; padding: 11px 22px; border-radius: 100px;
+    border: 1.5px solid var(--line); background: var(--surface);
+    color: var(--ink-72); font-size: 13px; font-weight: 500; cursor: pointer;
+    transition: all 0.25s var(--spring);
+  }
+  .chip.on { border-color: var(--acc); background: var(--acc-soft); color: var(--acc); transform: translateY(-1px); }
+  .chip:active { transform: scale(0.94); }
+
+  /* ===== 壁纸网格(② 交错渐入) ===== */
+  .grid { padding: 4px 20px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .tile {
+    position: relative; border-radius: 18px; overflow: hidden;
+    aspect-ratio: 9 / 15; cursor: pointer;
+    border: 1px solid rgba(243, 234, 217, 0.09);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.4);
+    background-size: cover; background-position: center;
+    transition: transform 0.3s var(--spring), box-shadow 0.3s ease;
+  }
+  .tile:active { transform: scale(0.96); }
+  .tile .t-name {
+    position: absolute; left: 14px; bottom: 12px; z-index: 2;
+    font-family: var(--serif); font-size: 15px; letter-spacing: 0.08em; color: #fff;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.7);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tile .t-name .hf { color: #ff5e7e; font-size: 15px; display: none; }
+  .tile.faved .t-name .hf { display: inline; }
+  .tile::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.55)); }
+
+  .js .rv { opacity: 0; transform: translateY(24px) scale(0.96); transition: opacity 0.55s var(--ease), transform 0.55s var(--ease); }
+  .js .rv.in { opacity: 1; transform: none; }
+
+  /* 骨架屏 */
+  .sk-grid { padding: 4px 20px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .sk-t { aspect-ratio: 9 / 15; border-radius: 16px; background: linear-gradient(90deg, var(--surface) 25%, var(--card) 50%, var(--surface) 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+
+  /* ===== Tab 栏(⑩ 玻璃) ===== */
+  .tabbar {
+    position: absolute; left: 14px; right: 14px; bottom: 14px; z-index: 100;
+    height: 74px; border-radius: 20px;
+    display: flex;
+    background: rgba(25, 21, 33, 0.72);
+    -webkit-backdrop-filter: blur(18px) saturate(150%); backdrop-filter: blur(18px) saturate(150%);
+    border: 1px solid var(--line);
+    box-shadow: 0 18px 50px rgba(0,0,0,0.5);
+  }
+  .tab {
+    flex: 1; border: none; background: none; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    color: var(--ink-52); font-size: 11px;
+    transition: color 0.25s ease;
+  }
+  .tab svg { width: 24px; height: 24px; }
+  .tab.active { color: var(--acc); }
+  .tab .dot { width: 5px; height: 5px; border-radius: 50%; background: transparent; }
+  .tab.active .dot { background: var(--acc); }
+
+  /* ===== ⑮ 预览(FLIP) ===== */
+  .pv-ov { position: absolute; inset: 0; z-index: 300; background: rgba(6, 5, 9, 0.75); display: none; }
+  .pv-ov.open { display: block; }
+  .pv {
+    position: absolute; z-index: 301; display: none; overflow: hidden;
+    background: var(--surface); flex-direction: column;
+  }
+  .pv.show { display: flex; }
+  .pv.animating { transition: transform 0.5s var(--ease), border-radius 0.5s var(--ease); }
+  .pv-img { flex: 1; background-size: cover; background-position: center; min-height: 0; }
+  .pv-bar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 18px calc(16px + env(safe-area-inset-bottom));
+  }
+  .pv-name { font-family: var(--serif); font-size: 22px; letter-spacing: 0.05em; flex: 1; }
+  .pv-actions { display: flex; gap: 10px; }
+  .pv-btn {
+    min-width: 48px; height: 48px; border-radius: 14px;
+    border: 1.5px solid var(--line); background: var(--surface);
+    color: var(--ink); font-size: 19px; cursor: pointer;
+    transition: transform 0.3s var(--spring), border-color 0.2s ease, color 0.2s ease;
+  }
+  .pv-btn.faved { color: #ff5e7e; border-color: #ff5e7e; }
+  .pv-btn.faved .h { display: inline; }
+  .pv-btn.go { background: var(--acc); border-color: var(--acc); color: #fff; padding: 0 22px; font-size: 13px; font-weight: 600; }
+  .pv-close { position: absolute; top: 14px; right: 14px; z-index: 5; width: 42px; height: 42px; border-radius: 50%; background: rgba(16,13,19,0.55); border: 1px solid var(--line); color: #fff; font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+  /* ===== 底部抽屉(排序) ===== */
+  .sheet-ov { position: absolute; inset: 0; z-index: 310; background: rgba(6,5,9,0.6); display: none; }
+  .sheet-ov.open { display: block; }
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 311;
+    background: var(--surface); border-radius: 24px 24px 0 0;
+    padding: 14px 22px calc(26px + env(safe-area-inset-bottom));
+    transform: translateY(100%); transition: transform 0.45s var(--ease);
+  }
+  .sheet.open { transform: translateY(0); }
+  .sheet h4 { font-family: var(--serif); font-size: 20px; font-weight: 400; letter-spacing: 0.06em; margin: 10px 0 18px; }
+  .sheet .seg { display: flex; gap: 10px; }
+  .sheet .seg button {
+    flex: 1; padding: 14px 8px; border-radius: 12px;
+    border: 1.5px solid var(--line); background: var(--bg);
+    color: var(--ink-72); font-size: 13px; cursor: pointer;
+    transition: all 0.25s var(--spring);
+  }
+  .sheet .seg button.on { border-color: var(--teal); color: var(--teal); background: rgba(83,199,184,0.08); }
+  .sheet-handle { width: 44px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto 6px; }
+
+  /* ===== 搜索 ===== */
+  .search-ov { position: absolute; inset: 0; z-index: 320; background: rgba(6,5,9,0.6); display: none; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+  .search-ov.open { display: block; }
+  .search-panel { position: absolute; top: 60px; left: 16px; right: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.6); animation: panelIn 0.25s var(--spring); }
+  @keyframes panelIn { from { opacity: 0; transform: translateY(-14px) scale(0.98); } }
+  .sp-row { display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+  .sp-input { flex: 1; border: none; outline: none; background: none; color: var(--ink); font-size: 16px; }
+  .sp-list { max-height: 300px; overflow-y: auto; padding: 8px; }
+  .sp-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; cursor: pointer; }
+  .sp-item:hover { background: var(--acc-soft); }
+  .sp-thumb { width: 44px; height: 44px; border-radius: 10px; background-size: cover; flex-shrink: 0; }
+  .sp-empty { padding: 30px 20px; text-align: center; color: var(--ink-52); font-size: 13px; }
+
+  /* ===== 我的 · 主题色四选(可选组件) ===== */
+  .me-head { padding: 70px 20px 10px; }
+  .profile { display: flex; align-items: center; gap: 18px; padding: 26px 24px; background: linear-gradient(140deg, #262019, #1d1915 70%); border: 1px solid var(--line); border-radius: 18px; margin: 0 20px; }
+  .avatar { width: 62px; height: 62px; border-radius: 50%; background: linear-gradient(135deg, var(--acc), var(--teal)); display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-size: 26px; color: #fff; flex-shrink: 0; }
+  .profile h4 { font-family: var(--serif); font-size: 21px; font-weight: 400; letter-spacing: 0.06em; }
+  .profile p { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; color: var(--ink-52); margin-top: 5px; }
+
+  .set-group { margin: 18px 20px 0; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .set-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: var(--surface); }
+  .set-row + .set-row { border-top: 1px solid var(--line); }
+  .set-row span { font-size: 14px; }
+  .set-row small { display: block; font-size: 11px; color: var(--ink-52); margin-top: 2px; }
+
+  .switch { width: 52px; height: 30px; border-radius: 100px; background: var(--card); border: 1px solid var(--line); position: relative; cursor: pointer; transition: background 0.25s ease, border-color 0.25s ease; flex-shrink: 0; }
+  .switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--ink-52); transition: transform 0.3s var(--spring), background 0.25s ease; }
+  .switch.on { background: var(--acc-soft); border-color: var(--acc); }
+  .switch.on::after { transform: translateX(22px); background: var(--acc); }
+
+  .swatches { display: flex; gap: 14px; }
+  .swatch { width: 34px; height: 34px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: transform 0.3s var(--spring), border-color 0.2s ease; }
+  .swatch.on { border-color: var(--ink); transform: scale(1.12); }
+
+  /* ===== Toast / 彩带 ===== */
+  .toast {
+    position: absolute; left: 50%; bottom: 110px; z-index: 400;
+    transform: translate(-50%, 10px); opacity: 0;
+    background: rgba(242, 237, 245, 0.95); color: #17131f;
+    border-radius: 12px; padding: 12px 20px; font-size: 13px; font-weight: 500;
+    transition: opacity 0.25s var(--ease), transform 0.25s var(--ease);
+    pointer-events: none; max-width: 85%; text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  #confettiCanvas { position: absolute; inset: 0; z-index: 350; pointer-events: none; display: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .js .rv { opacity: 1; transform: none; }
+    .boot-mark { transform: scale(1); opacity: 1; }
+    .boot-name, .boot-slogan { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <div class="wall-layer" id="wallLayer" aria-hidden="true"></div>
+  <div class="wall-veil" id="wallVeil" aria-hidden="true"></div>
+
+  <!-- ⑥ 启动屏 -->
+  <div class="boot play" id="boot" aria-hidden="true">
+    <div class="boot-mark">拾</div>
+    <div class="boot-name">拾光壁纸</div>
+    <div class="boot-slogan">SHIGUANG WALLPAPER</div>
+  </div>
+
+  <!-- ═══════ 首页 ═══════ -->
+  <section class="screen active" id="screen-home">
+    <div class="home-head" id="homeHead">
+      <div class="head-inner">
+        <div class="hi">PICK · TODAY'S PICK</div>
+        <div class="head-title">今天,换一张<br><em>让眼睛休息的</em></div>
+        <div class="tw-line"><span id="twText"></span><span class="tw-caret"></span></div>
+      </div>
+      <button class="search-fab" id="searchFab" aria-label="搜索壁纸">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+      </button>
+    </div>
+
+    <div class="today">
+      <span class="today-num" id="todayNum">0</span>
+      <span class="today-label">New today<br>今日上新</span>
+    </div>
+
+    <div class="chips" id="chips">
+      <button class="chip on" data-cat="all">全部</button>
+      <button class="chip" data-cat="gradient">渐变</button>
+      <button class="chip" data-cat="geo">几何</button>
+      <button class="chip" data-cat="dark">暗色</button>
+      <button class="chip" data-cat="warm">暖色</button>
+    </div>
+
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <!-- ═══════ 收藏 ═══════ -->
+  <section class="screen" id="screen-fav">
+    <div style="padding: 70px 20px 12px;">
+      <div class="hi">FAVORITES · 我的收藏</div>
+      <div class="head-title" style="font-size: 30px;">心动的那些</div>
+    </div>
+    <div id="favBody"></div>
+  </section>
+
+  <!-- ═══════ 我的 ═══════ -->
+  <section class="screen" id="screen-mine">
+    <div class="me-head">
+      <div class="hi">ME · 我的</div>
+      <div class="head-title">主题,随你换</div>
+    </div>
+    <div class="profile">
+      <div class="avatar">拾</div>
+      <div><h4>拾光用户</h4><p>FREE PLAN · 24 WALLPAPERS</p></div>
+    </div>
+    <div class="set-group">
+      <div class="set-row">
+        <span>强调色<small>全 App 跟随变化</small></span>
+        <div class="swatches" id="swatches">
+          <div class="swatch on" data-c="#d9a862" style="background:#d9a862;" role="radio" aria-checked="true" tabindex="0"></div>
+          <div class="swatch" data-c="#e0679a" style="background:#e0679a;" role="radio" aria-checked="false" tabindex="0"></div>
+          <div class="swatch" data-c="#53c7b8" style="background:#53c7b8;" role="radio" aria-checked="false" tabindex="0"></div>
+          <div class="swatch" data-c="#7a8cff" style="background:#7a8cff;" role="radio" aria-checked="false" tabindex="0"></div>
+        </div>
+      </div>
+      <div class="set-row">
+        <span>滑动预览<small>点壁纸直接全屏</small></span>
+        <div class="switch on" id="sw1" role="switch" aria-checked="true" tabindex="0"></div>
+      </div>
+      <div class="set-row">
+        <span>省流模式<small>仅 Wi-Fi 加载新图</small></span>
+        <div class="switch" id="sw2" role="switch" aria-checked="false" tabindex="0"></div>
+      </div>
+      <div class="set-row">
+        <span>深夜自动调暗<small>22:00 - 06:00</small></span>
+        <div class="switch on" id="sw3" role="switch" aria-checked="true" tabindex="0"></div>
+      </div>
+    </div>
+    <div class="set-group">
+      <div class="set-row">
+        <span>关于拾光壁纸<small>v1.0 · 用 uiux-skills 打造</small></span>
+        <span style="color:var(--ink-52);">›</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tab 栏 -->
+  <nav class="tabbar" id="tabbar">
+    <button class="tab active" data-tab="home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9.5" cy="9.5" r="1.6"/><path d="M4 16 L10 11 L20 19"/></svg>
+      壁纸<span class="dot"></span>
+    </button>
+    <button class="tab" data-tab="fav">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20 C 5 15, 4 10, 7 7.5 C 9 5.8, 11.2 6.6, 12 8.4 C 12.8 6.6, 15 5.8, 17 7.5 C 20 10, 19 15, 12 20 Z"/></svg>
+      收藏<span class="dot"></span>
+    </button>
+    <button class="tab" data-tab="mine">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21 Q4 13 12 13 Q20 13 20 21"/></svg>
+      我的<span class="dot"></span>
+    </button>
+  </nav>
+
+  <!-- 排序抽屉 -->
+  <div class="sheet-ov" id="sheetOv"></div>
+  <div class="sheet" id="sheet">
+    <div class="sheet-handle"></div>
+    <h4>排序方式</h4>
+    <div class="seg" id="sortSeg">
+      <button class="on" data-sort="new">最新上架</button>
+      <button data-sort="hot">本周热门</button>
+      <button data-sort="random">随机洗牌</button>
+    </div>
+  </div>
+
+  <!-- 搜索 -->
+  <div class="search-ov" id="searchOv">
+    <div class="search-panel">
+      <div class="sp-row">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+        <input class="sp-input" id="searchInput" type="text" placeholder="搜索壁纸,试试「星空」" autocomplete="off">
+      </div>
+      <div class="sp-list" id="spList"></div>
+    </div>
+  </div>
+
+  <!-- 预览(FLIP) -->
+  <div class="pv-ov" id="pvOv"></div>
+  <div class="pv" id="pv" role="dialog" aria-modal="true">
+    <button class="pv-close" id="pvClose" aria-label="关闭">×</button>
+    <div class="pv-img" id="pvImg"></div>
+    <div class="pv-bar">
+      <span class="pv-name" id="pvName"></span>
+      <div class="pv-actions">
+        <button class="pv-btn" id="pvFav" aria-label="收藏">♡</button>
+        <button class="pv-btn go" id="pvSet">设为壁纸</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <canvas id="confettiCanvas"></canvas>
+</div>
+
+<script>
+/* ═══════ 数据:12 张纯 CSS 壁纸 ═══════ */
+var WALLS = [
+  { id: 0, name: '霓虹夜色', cat: 'dark', hot: 98, fav: false,
+    bg: 'radial-gradient(circle at 25% 25%, rgba(224,103,154,0.6), transparent 52%), radial-gradient(circle at 75% 72%, rgba(83,199,184,0.5), transparent 52%), #12101a' },
+  { id: 1, name: '暖沙落日', cat: 'warm', hot: 91, fav: false,
+    bg: 'linear-gradient(180deg, #f7b267, #e05c3a 55%, #7a2d1e)' },
+  { id: 2, name: '墨绿丝绒', cat: 'dark', hot: 76, fav: false,
+    bg: 'radial-gradient(circle at 30% 30%, #1d4a3d, #0c1f18 72%)' },
+  { id: 3, name: '粉雾', cat: 'warm', hot: 84, fav: false,
+    bg: 'radial-gradient(circle at 60% 40%, rgba(255,183,197,0.95), rgba(255,227,214,0.75) 60%, #fff5f0)' },
+  { id: 4, name: '条纹律动', cat: 'geo', hot: 63, fav: false,
+    bg: 'repeating-linear-gradient(45deg, #1c1a24 0 18px, #2a2735 18px 36px)' },
+  { id: 5, name: '深海微光', cat: 'dark', hot: 88, fav: false,
+    bg: 'radial-gradient(circle at 70% 20%, rgba(120,190,255,0.4), transparent 46%), linear-gradient(180deg, #0a1a2f, #050b14)' },
+  { id: 6, name: '焦糖漩涡', cat: 'warm', hot: 79, fav: false,
+    bg: 'conic-gradient(from 120deg at 50% 50%, #6b3a1f, #c98a4b, #f0d3a0, #6b3a1f)' },
+  { id: 7, name: '极光', cat: 'gradient', hot: 95, fav: false,
+    bg: 'radial-gradient(circle at 30% 60%, rgba(90,220,180,0.55), transparent 52%), radial-gradient(circle at 70% 30%, rgba(150,120,255,0.5), transparent 52%), #0b1020' },
+  { id: 8, name: '方格迷阵', cat: 'geo', hot: 58, fav: false,
+    bg: 'repeating-conic-gradient(#211d2b 0 25%, #191621 0 50%) 0 0 / 56px 56px' },
+  { id: 9, name: '樱粉层云', cat: 'gradient', hot: 82, fav: false,
+    bg: 'linear-gradient(160deg, #ffd9e8, #ffb3c8 45%, #ff8fb1)' },
+  { id: 10, name: '靛蓝星空', cat: 'dark', hot: 90, fav: false,
+    bg: 'radial-gradient(1.5px 1.5px at 20% 30%, #fff, transparent), radial-gradient(1px 1px at 60% 70%, #cfe0ff, transparent), radial-gradient(1.5px 1.5px at 80% 22%, #fff, transparent), radial-gradient(1px 1px at 40% 80%, #ffe9c9, transparent), #0a0f1e' },
+  { id: 11, name: '落日条带', cat: 'gradient', hot: 71, fav: false,
+    bg: 'repeating-linear-gradient(180deg, #ff9a5a 0 26px, #ff6b6b 26px 52px, #c94f7c 52px 78px)' },
+];
+var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+var $ = function (s) { return document.querySelector(s); };
+var favs = {};
+var currentCat = 'all';
+var currentSort = 'new';
+
+/* ═══════ ⑥ 启动屏(保存模板供重播) ═══════ */
+(function () {
+  var boot = $('#boot');
+  window.__bootHTML = boot.outerHTML;
+  if (reduced) { boot.classList.add('done'); return; }
+  setTimeout(function () { boot.classList.add('done'); }, 2100);
+})();
+window.replayBoot = function () {
+  var old = document.getElementById('boot');
+  if (old) old.remove();
+  var h = document.createElement('div');
+  h.innerHTML = window.__bootHTML;
+  var b = h.firstElementChild;
+  b.classList.remove('done');
+  document.querySelector('.app').prepend(b);
+  setTimeout(function () { b.classList.add('done'); }, 2100);
+  return b;
+};
+
+/* ═══════ 网格渲染(② 交错渐入) ═══════ */
+function renderGrid() {
+  var list = WALLS.filter(function (w) { return currentCat === 'all' || w.cat === currentCat; });
+  if (currentSort === 'hot') list = list.slice().sort(function (a, b) { return b.hot - a.hot; });
+  else if (currentSort === 'random') list = list.slice().sort(function () { return Math.random() - 0.5; });
+  var grid = $('#grid');
+  grid.innerHTML = list.map(function (w, i) {
+    return '<div class="tile rv' + (favs[w.id] ? ' faved' : '') + '" data-id="' + w.id + '" role="button" tabindex="0" ' +
+      'style="background:' + w.bg + '; transition-delay:' + (i % 4) * 60 + 'ms" aria-label="' + w.name + '">' +
+      '<span class="t-name">' + w.name + (favs[w.id] ? '<span class="hf">♥</span>' : '') + '</span></div>';
+  }).join('');
+  grid.querySelectorAll('.rv').forEach(function (el) {
+    if (reduced) { el.classList.add('in'); return; }
+    revealIO.observe(el);
+  });
+}
+
+/* 可重入渐入观察器 */
+var revealIO = ('IntersectionObserver' in window && !reduced)
+  ? new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) en.target.classList.add('in');
+        else if (en.boundingClientRect.top > 0) en.target.classList.remove('in');
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -4% 0px' })
+  : null;
+
+/* ═══════ 筛选 chips(骨架屏过渡) ═══════ */
+$('#chips').addEventListener('click', function (e) {
+  var chip = e.target.closest('.chip');
+  if (!chip || chip.classList.contains('on')) return;
+  document.querySelectorAll('#chips .chip').forEach(function (c) { c.classList.remove('on'); });
+  chip.classList.add('on');
+  currentCat = chip.dataset.cat;
+  var grid = $('#grid');
+  if (reduced) { renderGrid(); return; }
+  grid.innerHTML = '<div class="sk-grid">' + Array(6).join(0).split('').map(function () {
+    return '<div class="sk-t"></div>';
+  }).join('') + '</div>';
+  setTimeout(function () { renderGrid(); }, 480);
+});
+
+/* ═══════ 排序抽屉 ═══════ */
+$('#sheetOv').addEventListener('click', function () { $('#sheetOv').classList.remove('open'); $('#sheet').classList.remove('open'); });
+document.querySelector('[data-tab="fav"]').addEventListener('long-press', function () {});
+/* 排序入口:首页下拉双击?给排序加个入口 chip 旁——用长按标题区;简单起见挂在「今日上新」卡点击 */
+$('.today').addEventListener('click', function () {
+  $('#sheetOv').classList.add('open');
+  $('#sheet').classList.add('open');
+});
+$('#sortSeg').addEventListener('click', function (e) {
+  var b = e.target.closest('button');
+  if (!b) return;
+  document.querySelectorAll('#sortSeg button').forEach(function (x) { x.classList.remove('on'); });
+  b.classList.add('on');
+  currentSort = b.dataset.sort;
+  setTimeout(function () {
+    $('#sheetOv').classList.remove('open');
+    $('#sheet').classList.remove('open');
+    renderGrid();
+    toast('已按「' + b.textContent + '」排序');
+  }, 260);
+});
+
+/* ═══════ Tab 切换 ═══════ */
+window.showTab = function (name) {
+  document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('active', x.dataset.tab === name); });
+  ['home', 'fav', 'mine'].forEach(function (n) {
+    document.getElementById('screen-' + n).classList.toggle('active', n === name);
+  });
+  if (name === 'fav') renderFav();
+};
+document.querySelectorAll('.tab').forEach(function (t) {
+  t.addEventListener('click', function () { showTab(t.dataset.tab); });
+});
+
+/* ═══════ 收藏页 ═══════ */
+function renderFav() {
+  var list = WALLS.filter(function (w) { return favs[w.id]; });
+  var body = $('#favBody');
+  if (!list.length) {
+    body.innerHTML = '<div class="empty" style="text-align:center;padding:80px 40px;">' +
+      '<span style="font-size:52px;display:block;margin-bottom:16px;">🤍</span>' +
+      '<h4 style="font-family:var(--serif);font-size:22px;font-weight:400;letter-spacing:0.06em;">还没有收藏</h4>' +
+      '<p style="font-size:13px;color:var(--ink-52);margin:8px 0 22px;">点壁纸上的小心心,喜欢就收进来。</p>' +
+      '<button class="pv-btn go" style="border:none;cursor:pointer;" onclick="showTab(\'home\')">去逛逛 →</button></div>';
+    return;
+  }
+  body.innerHTML = '<div class="grid">' + list.map(function (w) {
+    return '<div class="tile" data-id="' + w.id + '" style="background:' + w.bg + ';cursor:pointer;">' +
+      '<span class="t-name">' + w.name + '<span class="hf" style="color:#ff5e7e;"> ♥</span></span></div>';
+  }).join('') + '</div>';
+  body.querySelectorAll('.tile').forEach(function (t) {
+    t.addEventListener('click', function () { openPreview(+t.dataset.id, t); });
+  });
+}
+
+/* ═══════ ⑮ FLIP 预览 ═══════ */
+(function () {
+  var ov = $('#pvOv'), pv = $('#pv');
+  var app = $('#app');
+  var open = false, animating = false, originTile = null, curId = -1;
+
+  window.openPreview = function (id, tileEl) {
+    if (open || animating) return;
+    var w = WALLS[+id];
+    curId = +id;
+    originTile = tileEl || document.querySelector('.tile[data-id="' + id + '"]');
+    $('#pvImg').style.background = w.bg;
+    $('#pvName').textContent = w.name;
+    updateFavBtn();
+    var first = originTile ? originTile.getBoundingClientRect() : app.getBoundingClientRect();
+    var appR = app.getBoundingClientRect();
+    open = true; animating = true;
+    pv.classList.add('show');
+    pv.style.transition = 'none';
+    pv.style.left = '0'; pv.style.top = '0';
+    pv.style.width = appR.width + 'px'; pv.style.height = appR.height + 'px';
+    pv.style.borderRadius = '0px';
+    pv.style.transformOrigin = 'center center';
+    var sx = first.width / appR.width, sy = first.height / appR.height;
+    var tx = first.left - appR.left + first.width / 2 - appR.width / 2;
+    var ty = first.top - appR.top + first.height / 2 - appR.height / 2;
+    pv.style.transform = 'translate(' + tx.toFixed(1) + 'px,' + ty.toFixed(1) + 'px) scale(' + sx.toFixed(4) + ',' + sy.toFixed(4) + ')';
+    ov.classList.add('open');
+    if (originTile) originTile.style.visibility = 'hidden';
+    void pv.offsetHeight;              /* 同步 reflow:后台标签也能推进过渡 */
+    pv.classList.add('animating');
+    pv.style.transform = 'translate(0,0) scale(1,1)';
+    setTimeout(function () {
+      pv.classList.remove('animating'); pv.style.transform = ''; animating = false;
+    }, reduced ? 30 : 520);
+  };
+
+  function closePreview() {
+    if (!open || animating) return;
+    animating = true;
+    var card = originTile || document.querySelector('.tile');
+    var last = card ? card.getBoundingClientRect() : app.getBoundingClientRect();
+    pv.classList.add('animating');
+    pv.style.transform = 'translate(' + (last.left - appR2().left + last.width / 2 - appR2().width / 2).toFixed(1) + 'px,' +
+      (last.top - appR2().top + last.height / 2 - appR2().height / 2).toFixed(1) + 'px) scale(' +
+      (last.width / appR2().width).toFixed(4) + ',' + (last.height / appR2().height).toFixed(4) + ')';
+    ov.classList.remove('open');
+    if (card) card.style.visibility = '';
+    void pv.offsetHeight;
+    setTimeout(function () {
+      pv.classList.remove('animating', 'show');
+      pv.style.transition = ''; pv.style.transform = '';
+      pv.style.left = pv.style.top = ''; pv.style.width = pv.style.height = '';
+      pv.style.borderRadius = '';
+      animating = false; open = false;
+    }, reduced ? 30 : 520);
+  }
+  function appR2() { return app.getBoundingClientRect(); }
+
+  $('#pvClose').addEventListener('click', closePreview);
+  ov.addEventListener('click', closePreview);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && open) closePreview(); });
+
+  $('#grid').addEventListener('click', function (e) {
+    var tile = e.target.closest('.tile');
+    if (tile) openPreview(+tile.dataset.id, tile);
+  });
+
+  function updateFavBtn() {
+    $('#pvFav').classList.toggle('faved', !!favs[curId]);
+    $('#pvFav').innerHTML = favs[curId] ? '♥' : '♡';
+  }
+  $('#pvFav').addEventListener('click', function () {
+    favs[curId] = !favs[curId];
+    updateFavBtn();
+    if (!reduced) {
+      pv.classList.remove('pop'); void pv.offsetWidth; pv.classList.add('pop');
+    }
+    toast(favs[curId] ? '已加入收藏 ♥' : '已取消收藏');
+    renderGrid();
+  });
+})();
+
+/* ═══════ 设为壁纸(实时换 App 背景)+ 彩带 ═══════ */
+$('#pvSet').addEventListener('click', function () {
+  var w = WALLS[curId];
+  if (!w) return;
+  document.documentElement.style.setProperty('--wall', w.bg);
+  $('#wallLayer').style.background = w.bg;
+  $('#wallLayer').style.backgroundSize = 'cover';
+  $('#wallLayer').classList.add('on');
+  $('#wallVeil').classList.add('on');
+  $('#pvClose').click();
+  toast('已设为壁纸,App 换上新衣 🎉');
+  fireConfetti($('#pvSet'));
+});
+
+/* ═══════ 主题色四选(实时换强调色) ═══════ */
+$('#swatches').addEventListener('click', function (e) {
+  var sw = e.target.closest('.swatch');
+  if (!sw) return;
+  document.querySelectorAll('.swatch').forEach(function (x) {
+    x.classList.remove('on'); x.setAttribute('aria-checked', 'false');
+  });
+  sw.classList.add('on'); sw.setAttribute('aria-checked', 'true');
+  var c = sw.dataset.c;
+  var root = document.documentElement;
+  root.style.setProperty('--acc', c);
+  root.style.setProperty('--acc-soft', c + '29');
+  toast('强调色已切换');
+});
+
+/* ═══════ 开关 ═══════ */
+document.querySelectorAll('.switch').forEach(function (sw) {
+  function toggle() {
+    sw.classList.toggle('on');
+    sw.setAttribute('aria-checked', sw.classList.contains('on'));
+    toast(sw.classList.contains('on') ? '已开启' : '已关闭');
+  }
+  sw.addEventListener('click', toggle);
+  sw.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+});
+
+/* ═══════ Toast ═══════ */
+var toastTimer;
+function toast(msg) {
+  var t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2100);
+}
+
+renderGrid();
+
+/* ═══════ 搜索 ═══════ */
+(function () {
+  var ov = $('#searchOv'), input = $('#searchInput'), list = $('#spList');
+  function render(q) {
+    q = q.trim().toLowerCase();
+    var hits = WALLS.filter(function (w) { return !q || (w.name + w.cat).toLowerCase().indexOf(q) >= 0; });
+    if (!hits.length) {
+      list.innerHTML = '<div class="sp-empty">没有找到「' + q + '」<br>试试「星空」「极光」「暖」</div>';
+      return;
+    }
+    list.innerHTML = hits.map(function (w) {
+      return '<div class="sp-item" data-id="' + w.id + '"><span class="sp-thumb" style="background:' + w.bg + '"></span>' +
+        '<span style="font-size:14px;">' + w.name + '</span></div>';
+    }).join('');
+  }
+  function openSearch() { ov.classList.add('open'); input.value = ''; render(''); setTimeout(function () { input.focus(); }, 80); }
+  function closeSearch() { ov.classList.remove('open'); }
+  $('.hi').addEventListener('click', openSearch);
+  ov.addEventListener('click', function (e) { if (e.target === ov) closeSearch(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && ov.classList.contains('open')) closeSearch(); });
+  input.addEventListener('input', function () { render(input.value); });
+  list.addEventListener('click', function (e) {
+    var item = e.target.closest('.sp-item');
+    if (!item) return;
+    closeSearch();
+    openPreview(+item.dataset.id, null);
+  });
+  window.openSearch = openSearch;
+})();
+
+/* ═══════ ⑧ 数字滚动 ═══════ */
+(function () {
+  var el = $('#todayNum'), done = false;
+  if ('IntersectionObserver' in window && !reduced) {
+    new IntersectionObserver(function (entries, obs) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        obs.disconnect();
+        var target = 24, t0 = performance.now();
+        (function step(t) {
+          var p = Math.min(1, (t - t0) / 1000);
+          var e = 1 - Math.pow(2, -10 * p);
+          el.textContent = Math.round(target * e);
+          if (p < 1) requestAnimationFrame(step);
+        })(t0);
+      });
+    }, { threshold: 0.4 }).observe(el);
+  } else { el.textContent = 24; }
+})();
+
+/* ═══════ ⑰ 打字机 ═══════ */
+(function () {
+  var el = $('#twText');
+  var text = '编辑精选:极光和靛蓝星空,这周被收藏得最多。';
+  var i = 0;
+  if (reduced) { el.textContent = text; return; }
+  setTimeout(function tick() {
+    if (i >= text.length) return;
+    el.textContent += text[i++];
+    var d = 34 + Math.random() * 46;
+    if (',。:'.indexOf(text[i - 1]) >= 0) d = 240;
+    setTimeout(tick, d);
+  }, 2200);
+})();
+
+/* ═══════ ① 头部视差 ═══════ */
+(function () {
+  if (reduced) return;
+  var home = $('#screen-home'), inner = $('.head-inner'), ticking = false;
+  home.addEventListener('scroll', function () {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function () {
+      ticking = false;
+      var y = home.scrollTop;
+      if (y < 500) {
+        inner.style.transform = 'translateY(' + (y * 0.3).toFixed(1) + 'px)';
+        inner.style.opacity = String(Math.max(0, 1 - y / 380));
+      }
+    });
+  }, { passive: true });
+})();
+
+/* ═══════ ⑬ 彩带 ═══════ */
+function fireConfetti(anchor) {
+  if (reduced) return;
+  var canvas = document.getElementById('confettiCanvas');
+  var app = document.getElementById('app');
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = app.clientWidth * dpr; canvas.height = app.clientHeight * dpr;
+  canvas.style.display = 'block';
+  var ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  var r = anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : anchor;
+  var aR = app.getBoundingClientRect();
+  var ox = (r.left !== undefined ? r.left - aR.left + (r.width || 0) / 2 : app.clientWidth / 2);
+  var oy = (r.top !== undefined ? r.top - aR.top : app.clientHeight / 2);
+  var colors = ['#e0679a', '#53c7b8', '#d9a862', '#f2edf5', '#7a8cff'];
+  var parts = [];
+  for (var i = 0; i < 120; i++) {
+    var ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.4;
+    var sp = 6 + Math.random() * 7;
+    parts.push({ x: ox, y: oy, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
+      w: 5 + Math.random() * 5, h: 7 + Math.random() * 6,
+      rot: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.3,
+      color: colors[i % colors.length], life: 120 + Math.random() * 40 });
+  }
+  (function frame() {
+    ctx.clearRect(0, 0, app.clientWidth, app.clientHeight);
+    var alive = false;
+    parts.forEach(function (p) {
+      if (p.life <= 0) return;
+      alive = true; p.life--;
+      p.vy += 0.16; p.vx *= 0.99; p.vy *= 0.995;
+      p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      ctx.globalAlpha = Math.min(1, p.life / 30);
+      ctx.fillStyle = p.color; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    });
+    if (alive) requestAnimationFrame(frame);
+    else canvas.style.display = 'none';
+  })();
+}
+</script>
+
+</body>
+</html>
