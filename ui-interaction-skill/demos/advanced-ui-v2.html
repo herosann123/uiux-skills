@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>10 种高级 UI 交互 · 第二辑</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..900&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13/dist/ScrollTrigger.min.js"></script>
+<style>
+  :root {
+    --bg: #f4f0e8;
+    --bg-2: #ebe5d6;
+    --bg-3: #ddd5c2;
+    --ink: #161616;
+    --ink-soft: #4a4742;
+    --muted: #9a958c;
+    --accent: #b85940;
+    --accent-2: #2d4a3e;
+    --gold: #c9a368;
+    --border: rgba(22, 22, 22, 0.14);
+    --border-strong: rgba(22, 22, 22, 0.32);
+    --serif: 'Fraunces', 'Times New Roman', serif;
+    --sans: 'Inter', -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* 触摸设备：去掉双击缩放延迟 */
+  button, a, [onclick], .vt-toggle, .ripple-btn {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  ::selection { background: var(--ink); color: var(--bg); }
+  header.topnav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(244, 240, 232, 0.85);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+    height: 56px;
+    display: flex; align-items: center;
+    padding: 0 32px;
+  }
+  header.topnav .brand {
+    font-family: var(--serif); font-weight: 500; font-size: 17px;
+    letter-spacing: -0.01em; margin-right: 48px;
+  }
+  header.topnav .brand em { font-style: italic; color: var(--accent); font-weight: 400; }
+  header.topnav nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+  header.topnav nav::-webkit-scrollbar { display: none; }
+  header.topnav nav a {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--ink-soft); text-decoration: none;
+    padding: 6px 10px; border-radius: 4px; white-space: nowrap;
+    transition: all 0.2s ease; letter-spacing: 0.02em;
+  }
+  header.topnav nav a:hover { background: rgba(22,22,22,0.06); color: var(--ink); }
+  header.topnav nav a span { color: var(--muted); margin-right: 4px; }
+  .hero {
+    padding: 168px 64px 120px;
+    border-bottom: 1px solid var(--border);
+    position: relative; overflow: hidden;
+  }
+  .hero .meta {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--muted); letter-spacing: 0.08em;
+    text-transform: uppercase; margin-bottom: 32px;
+    display: flex; gap: 24px; align-items: center;
+  }
+  .hero .meta::before { content: ''; width: 32px; height: 1px; background: var(--ink); }
+  .hero h1 {
+    font-family: var(--serif); font-weight: 380;
+    font-size: clamp(56px, 9vw, 132px); line-height: 0.95;
+    letter-spacing: -0.035em; margin-bottom: 40px; max-width: 1100px;
+  }
+  .hero h1 em { font-style: italic; color: var(--accent); font-weight: 300; }
+  .hero .lede {
+    font-size: 18px; line-height: 1.5; color: var(--ink-soft);
+    max-width: 560px; margin-bottom: 56px;
+  }
+  .hero .scroll-cue {
+    display: inline-flex; align-items: center; gap: 12px;
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
+  }
+  .hero .scroll-cue .line {
+    width: 48px; height: 1px; background: var(--ink);
+    position: relative; overflow: hidden;
+  }
+  .hero .scroll-cue .line::after {
+    content: ''; position: absolute; top: 0; left: -100%;
+    width: 100%; height: 100%; background: var(--accent);
+    animation: scrollLine 2.4s ease-in-out infinite;
+  }
+  @keyframes scrollLine {
+    0% { left: -100%; } 50% { left: 100%; } 100% { left: 100%; }
+  }
+  section.chapter {
+    padding: 120px 64px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  section.chapter .chapter-head {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 64px; margin-bottom: 64px; align-items: start;
+  }
+  .chapter-num {
+    font-family: var(--serif);
+    font-size: clamp(120px, 14vw, 220px);
+    font-weight: 300; line-height: 0.85;
+    color: var(--bg-3); letter-spacing: -0.04em;
+    user-select: none; margin-top: -40px;
+  }
+  .chapter-meta { padding-top: 24px; }
+  .chapter-tag {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--accent); letter-spacing: 0.12em;
+    text-transform: uppercase; margin-bottom: 16px;
+  }
+  .chapter-title {
+    font-family: var(--serif); font-weight: 400;
+    font-size: clamp(40px, 5vw, 64px); line-height: 1.05;
+    letter-spacing: -0.025em; margin-bottom: 24px;
+  }
+  .chapter-desc {
+    font-size: 16px; color: var(--ink-soft);
+    max-width: 480px; line-height: 1.65;
+  }
+  .chapter-desc strong { font-weight: 500; color: var(--ink); }
+  .demo-frame {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: 4px; overflow: hidden; position: relative;
+  }
+  .demo-frame .demo-label {
+    position: absolute; top: 16px; left: 16px; z-index: 5;
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    background: rgba(244, 240, 232, 0.7);
+    backdrop-filter: blur(6px);
+    padding: 4px 8px; border-radius: 2px;
+  }
+  .demo-frame .demo-area { min-height: 480px; position: relative; overflow: hidden; }
+  .code-block {
+    background: #16140f; color: #d4cdb8;
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.65;
+    padding: 28px 32px; border-radius: 4px; margin-top: 32px;
+    overflow-x: auto; border: 1px solid rgba(255,255,255,0.08);
+  }
+  .code-block .kw { color: #c9a368; }
+  .code-block .fn { color: #b85940; }
+  .code-block .num { color: #8aab94; }
+  .code-block .cmt { color: #6a6558; font-style: italic; }
+  .code-block .str { color: #a8b88c; }
+
+  .aurora-demo {
+    height: 600px; position: relative; overflow: hidden;
+    background: #0a0a0f; color: white;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .aurora-bg {
+    position: absolute; inset: 0;
+    filter: blur(80px) saturate(140%);
+    transition: transform 0.6s ease-out;
+  }
+  .aurora-blob {
+    position: absolute;
+    width: 60vw; height: 60vw;
+    border-radius: 50%;
+    opacity: 0.85;
+    mix-blend-mode: screen;
+    animation: aurora-float 22s ease-in-out infinite;
+  }
+  .aurora-blob.b1 { background: #ff6b6b; top: -15%; left: -10%; }
+  .aurora-blob.b2 { background: #4ecdc4; top: 30%; right: -15%; animation-delay: -7s; }
+  .aurora-blob.b3 { background: #ffd93d; bottom: -10%; left: 25%; animation-delay: -14s; }
+  .aurora-blob.b4 { background: #6b5b95; top: 50%; left: 45%; animation-delay: -3s; }
+  @keyframes aurora-float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    25% { transform: translate(15%, -10%) scale(1.1); }
+    50% { transform: translate(-10%, 20%) scale(0.9); }
+    75% { transform: translate(20%, 5%) scale(1.05); }
+  }
+  .aurora-content {
+    position: relative; z-index: 2; text-align: center; padding: 0 32px;
+  }
+  .aurora-tag {
+    font-family: var(--mono); font-size: 11px;
+    color: rgba(255,255,255,0.6); letter-spacing: 0.12em;
+    text-transform: uppercase; margin-bottom: 16px;
+  }
+  .aurora-title {
+    font-family: var(--serif); font-size: clamp(36px, 5vw, 56px);
+    font-weight: 380; letter-spacing: -0.02em; margin-bottom: 16px;
+  }
+  .aurora-sub { color: rgba(255,255,255,0.7); margin-bottom: 32px; }
+  .aurora-card {
+    display: inline-block;
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 20px 32px; border-radius: 12px;
+    font-size: 14px;
+  }
+
+  .particle-demo {
+    height: 600px; background: #0a0a0f;
+    position: relative; overflow: hidden;
+    display: flex; align-items: flex-end;
+  }
+  #particleCanvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .particle-content {
+    position: relative; z-index: 2; color: white;
+    padding: 48px; max-width: 480px;
+  }
+  .particle-tag {
+    font-family: var(--mono); font-size: 11px;
+    color: rgba(255,255,255,0.6); letter-spacing: 0.12em;
+    text-transform: uppercase; margin-bottom: 12px;
+  }
+  .particle-title {
+    font-family: var(--serif); font-size: clamp(36px, 5vw, 56px);
+    font-weight: 380; letter-spacing: -0.02em; margin-bottom: 16px;
+  }
+  .particle-sub { color: rgba(255,255,255,0.7); }
+
+  .ripple-demo {
+    height: 600px; background: var(--bg-2);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 24px; padding: 48px;
+    background-image: radial-gradient(circle at 20% 30%, rgba(184,89,64,0.05), transparent 40%),
+                      radial-gradient(circle at 80% 70%, rgba(45,74,62,0.05), transparent 40%);
+  }
+  .ripple-hint {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .ripple-btn {
+    position: relative; overflow: hidden;
+    padding: 16px 32px; border-radius: 100px;
+    font-family: var(--sans); font-size: 14px;
+    font-weight: 500; cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+    letter-spacing: 0.02em;
+  }
+  .ripple-btn.primary { background: var(--ink); color: var(--bg); }
+  .ripple-btn.primary:hover { background: var(--accent); }
+  .ripple-btn.secondary {
+    background: transparent; color: var(--ink); border-color: var(--border-strong);
+  }
+  .ripple-btn.secondary:hover { background: var(--ink); color: var(--bg); }
+  .ripple-btn.accent {
+    background: var(--accent); color: white;
+    box-shadow: 0 8px 24px rgba(184,89,64,0.3);
+  }
+  .ripple-btn.accent:hover { transform: translateY(-2px); }
+  .ripple {
+    position: absolute; border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    pointer-events: none;
+    transform: scale(0);
+    z-index: 2;
+  }
+  .ripple-btn.secondary .ripple { background: rgba(22, 22, 22, 0.5); }
+  .ripple-btn.accent .ripple { background: rgba(255, 255, 255, 0.85); }
+
+  .sticky-demo {
+    height: 600px; background: var(--bg-2);
+    overflow-y: auto; position: relative;
+    -webkit-overflow-scrolling: touch; /* iOS 动量滚动 */
+    overscroll-behavior: contain;      /* 防滚动穿透 */
+  }
+  .sticky-container { position: relative; height: 280vh; }
+  .sticky-stage {
+    position: sticky; top: 0; height: 100vh;
+    height: 100dvh; /* 移动端地址栏收展时取动态视口 */
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sticky-panel {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 60px;
+    opacity: 0; transform: scale(0.85);
+  }
+  .sticky-panel-content { max-width: 540px; text-align: left; }
+  .sticky-panel-tag {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--accent); letter-spacing: 0.12em;
+    text-transform: uppercase; margin-bottom: 16px;
+  }
+  .sticky-panel-num {
+    font-family: var(--serif); font-size: 96px;
+    color: var(--bg-3); font-weight: 300;
+    line-height: 1; margin-bottom: 16px;
+  }
+  .sticky-panel-title {
+    font-family: var(--serif); font-size: clamp(32px, 4vw, 48px);
+    font-weight: 400; letter-spacing: -0.02em; margin-bottom: 16px;
+  }
+  .sticky-panel-desc { color: var(--ink-soft); font-size: 16px; line-height: 1.6; }
+  .sticky-progress {
+    position: absolute; bottom: 32px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 8px; z-index: 10;
+  }
+  .sticky-dot {
+    width: 24px; height: 3px;
+    background: var(--bg-3); border-radius: 2px;
+    transition: background 0.3s ease;
+  }
+  .sticky-dot.active { background: var(--accent); }
+  .sticky-hint {
+    position: absolute; top: 32px; right: 32px;
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+    letter-spacing: 0.1em; text-transform: uppercase; z-index: 10;
+  }
+
+  .flip-demo {
+    height: 600px; background: var(--bg-2);
+    position: relative; overflow: hidden;
+  }
+  .flip-grid {
+    padding: 48px;
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 20px; height: 100%;
+    align-content: center;
+  }
+  .flip-card {
+    aspect-ratio: 4/3;
+    border-radius: 8px; overflow: hidden;
+    cursor: pointer; position: relative;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease;
+  }
+  .flip-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(22,22,22,0.1);
+  }
+  .flip-thumb {
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, var(--accent), var(--gold));
+  }
+  .flip-card[data-i="1"] .flip-thumb { background: linear-gradient(135deg, #2d4a3e, #c9a368); }
+  .flip-card[data-i="2"] .flip-thumb { background: linear-gradient(135deg, #6b5b95, #4ecdc4); }
+  .flip-card[data-i="3"] .flip-thumb { background: linear-gradient(135deg, #ffd93d, #ff6b6b); }
+  .flip-card[data-i="4"] .flip-thumb { background: linear-gradient(135deg, #2d4a3e, #4ecdc4); }
+  .flip-card[data-i="5"] .flip-thumb { background: linear-gradient(135deg, #b85940, #6b5b95); }
+  .flip-card-label {
+    position: absolute; bottom: 16px; left: 16px;
+    color: white; font-family: var(--serif);
+    font-size: 18px; font-weight: 500;
+    letter-spacing: -0.01em;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    z-index: 2;
+  }
+  .flip-detail {
+    position: fixed; inset: 0; z-index: 200;
+    pointer-events: none;
+  }
+  .flip-detail.open { pointer-events: auto; }
+  .flip-detail-inner {
+    position: absolute; overflow: hidden;
+    background: var(--bg);
+    box-shadow: 0 40px 80px rgba(22,22,22,0.3);
+    will-change: left, top, width, height, border-radius;
+  }
+  .flip-detail-close {
+    position: absolute; top: 24px; right: 24px;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(255,255,255,0.2); backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: white; font-size: 20px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.3s ease 0.2s;
+    z-index: 5;
+  }
+  .flip-detail.open .flip-detail-close { opacity: 1; }
+  .flip-detail-image {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--gold));
+  }
+  .flip-detail-image.s2 { background: linear-gradient(135deg, #2d4a3e, #c9a368); }
+  .flip-detail-image.s3 { background: linear-gradient(135deg, #6b5b95, #4ecdc4); }
+  .flip-detail-image.s4 { background: linear-gradient(135deg, #ffd93d, #ff6b6b); }
+  .flip-detail-image.s5 { background: linear-gradient(135deg, #2d4a3e, #4ecdc4); }
+  .flip-detail-image.s6 { background: linear-gradient(135deg, #b85940, #6b5b95); }
+  .flip-detail-body {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 50%; padding: 32px 40px;
+    display: flex; flex-direction: column; justify-content: center;
+    overflow-y: auto; /* 小屏文字超高时可滚动 */
+    -webkit-overflow-scrolling: touch;
+  }
+  .flip-detail-tag {
+    font-family: var(--mono); font-size: 10px;
+    color: var(--accent); letter-spacing: 0.12em;
+    text-transform: uppercase; margin-bottom: 8px;
+    opacity: 0; transform: translateY(10px);
+    transition: all 0.4s ease 0.3s;
+  }
+  .flip-detail.open .flip-detail-tag { opacity: 1; transform: translateY(0); }
+  .flip-detail-title {
+    font-family: var(--serif); font-size: 32px;
+    font-weight: 500; letter-spacing: -0.02em;
+    margin-bottom: 12px;
+    opacity: 0; transform: translateY(20px);
+    transition: all 0.4s ease 0.4s;
+  }
+  .flip-detail.open .flip-detail-title { opacity: 1; transform: translateY(0); }
+  .flip-detail-text {
+    color: var(--ink-soft); font-size: 14px;
+    line-height: 1.6;
+    opacity: 0; transform: translateY(20px);
+    transition: all 0.4s ease 0.5s;
+  }
+  .flip-detail.open .flip-detail-text { opacity: 1; transform: translateY(0); }
+
+  .vt-demo {
+    height: 600px;
+    position: relative; overflow: hidden;
+  }
+  .vt-demo.light { background: linear-gradient(135deg, #f4f0e8, #ebe5d6); color: var(--ink); }
+  .vt-demo.dark { background: linear-gradient(135deg, #1a1a1a, #2d2d2d); color: white; }
+  .vt-content {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; padding: 48px;
+  }
+  .vt-tag {
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .vt-demo.light .vt-tag { color: var(--accent); }
+  .vt-demo.dark .vt-tag { color: var(--gold); }
+  .vt-title {
+    font-family: var(--serif); font-size: clamp(40px, 6vw, 72px);
+    font-weight: 380; letter-spacing: -0.02em; margin-bottom: 16px;
+  }
+  .vt-state {
+    display: inline-block; padding: 4px 16px;
+    border-radius: 100px; font-family: var(--mono); font-size: 13px;
+  }
+  .vt-demo.light .vt-state { background: var(--ink); color: var(--bg); }
+  .vt-demo.dark .vt-state { background: white; color: var(--ink); }
+  .vt-sub { margin: 32px 0; max-width: 480px; opacity: 0.7; }
+  .vt-toggle {
+    padding: 14px 32px; border-radius: 100px;
+    font-family: var(--sans); font-size: 14px; font-weight: 500;
+    cursor: pointer; border: 1px solid;
+    transition: transform 0.3s ease; letter-spacing: 0.02em;
+  }
+  .vt-demo.light .vt-toggle { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .vt-demo.dark .vt-toggle { background: white; color: var(--ink); border-color: white; }
+  .vt-toggle:hover { transform: translateY(-2px); }
+  .vt-cards {
+    display: flex; gap: 16px; margin-bottom: 32px;
+  }
+  .vt-mini-card {
+    width: 80px; height: 100px; border-radius: 8px;
+  }
+  .vt-demo.light .vt-mini-card { background: var(--bg); border: 1px solid var(--border); }
+  .vt-demo.dark .vt-mini-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); }
+  ::view-transition-old(root), ::view-transition-new(root) {
+    animation-duration: 0.5s;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  ::view-transition-old(root) { animation-name: vt-out; }
+  ::view-transition-new(root) { animation-name: vt-in; }
+  @keyframes vt-out { to { opacity: 0; transform: scale(0.96); } }
+  @keyframes vt-in { from { opacity: 0; transform: scale(1.04); } }
+
+  .typewriter-demo {
+    height: 600px; background: var(--bg-2);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 48px;
+    position: relative;
+  }
+  .tw-window {
+    width: 100%; max-width: 540px;
+    background: var(--bg); border: 1px solid var(--border-strong);
+    border-radius: 12px; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(22,22,22,0.1);
+  }
+  .tw-header {
+    background: var(--bg-3);
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tw-dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: #fc6058;
+  }
+  .tw-dot.y { background: #fdbc40; }
+  .tw-dot.g { background: #34c84a; }
+  .tw-messages {
+    padding: 24px;
+    display: flex; flex-direction: column; gap: 20px;
+    min-height: 320px;
+  }
+  .tw-message {
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .tw-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 10px;
+    font-weight: 500; color: white;
+  }
+  .tw-avatar.user { background: var(--ink); }
+  .tw-avatar.ai { background: linear-gradient(135deg, var(--accent), var(--gold)); }
+  .tw-bubble {
+    background: var(--bg-3); padding: 12px 16px;
+    border-radius: 12px; max-width: 80%;
+    font-size: 14px; line-height: 1.55;
+    position: relative;
+  }
+  .tw-message.ai .tw-bubble {
+    background: rgba(184,89,64,0.08);
+    border: 1px solid rgba(184,89,64,0.15);
+  }
+  .tw-cursor {
+    display: inline-block; width: 2px; height: 1em;
+    background: var(--accent); vertical-align: text-bottom;
+    animation: blink 0.8s step-end infinite;
+    margin-left: 2px;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  .tw-controls {
+    margin-top: 24px;
+    display: flex; gap: 12px;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .tw-controls button {
+    background: var(--bg); border: 1px solid var(--border-strong);
+    padding: 10px 20px; border-radius: 100px;
+    font-family: var(--mono); font-size: 11px;
+    color: var(--ink); cursor: pointer;
+    letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .tw-controls button:hover { background: var(--ink); color: var(--bg); }
+  .tw-controls button.primary { background: var(--ink); color: var(--bg); }
+  .tw-controls button.primary:hover { background: var(--accent); }
+
+  footer {
+    padding: 120px 64px 80px;
+    background: var(--ink); color: var(--bg);
+  }
+  footer .grid {
+    display: grid; grid-template-columns: 2fr 1fr 1fr;
+    gap: 64px; margin-bottom: 80px;
+  }
+  footer h2 {
+    font-family: var(--serif); font-size: clamp(48px, 6vw, 96px);
+    font-weight: 380; line-height: 0.95; letter-spacing: -0.03em;
+  }
+  footer h2 em { color: var(--accent); font-style: italic; }
+  footer h4 {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--muted); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 16px;
+  }
+  footer ul { list-style: none; }
+  footer li {
+    font-size: 13px; color: var(--bg);
+    margin-bottom: 8px; opacity: 0.7;
+    transition: opacity 0.2s ease; cursor: pointer;
+  }
+  footer li:hover { opacity: 1; color: var(--accent); }
+  footer .credits {
+    border-top: 1px solid rgba(244,240,232,0.15);
+    padding-top: 32px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+  @media (max-width: 900px) {
+    header.topnav { padding: 0 20px; }
+    header.topnav .brand { margin-right: 24px; font-size: 15px; }
+    .hero, section.chapter, footer { padding-left: 24px; padding-right: 24px; }
+    .hero { padding-top: 120px; padding-bottom: 80px; }
+    section.chapter { padding-top: 80px; padding-bottom: 80px; }
+    section.chapter .chapter-head { grid-template-columns: 1fr; gap: 24px; margin-bottom: 40px; }
+    .chapter-num { font-size: 80px; margin-top: 0; }
+    .flip-grid { grid-template-columns: repeat(2, 1fr); padding: 24px; }
+    footer .grid { grid-template-columns: 1fr; gap: 40px; }
+    /* 移动端 GPU 弱：大 blur 是性能杀手，按 skill 预算降到 40px */
+    .aurora-bg { filter: blur(40px) saturate(140%); }
+    .flip-detail-body { padding: 20px 24px; }
+    .flip-detail-title { font-size: 24px; }
+    .aurora-content, .particle-content { padding: 0 20px 20px; }
+  }
+  /* 手机横屏 / 短视口:压缩 demo 高度 */
+  @media (max-height: 700px) {
+    .aurora-demo, .particle-demo, .ripple-demo, .sticky-demo,
+    .flip-demo, .vt-demo, .typewriter-demo { height: min(600px, 88vh); }
+    .tw-messages { min-height: 220px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topnav">
+  <div class="brand">Vol. 02 · <em>Beyond</em></div>
+  <nav>
+    <a href="#ch11"><span>11</span>Aurora</a>
+    <a href="#ch12"><span>12</span>Particles</a>
+    <a href="#ch13"><span>13</span>Ripple</a>
+    <a href="#ch14"><span>14</span>Sticky</a>
+    <a href="#ch15"><span>15</span>FLIP</a>
+    <a href="#ch16"><span>16</span>View Trans</a>
+    <a href="#ch17"><span>17</span>AI Type</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="meta">
+    <span>Vol. 02 · Beyond the Basics</span>
+    <span>·</span>
+    <span>7 Patterns · 2025</span>
+  </div>
+  <h1>Beyond <em>Basic.</em><br>The Next Patterns.</h1>
+  <p class="lede">第二辑 —— 7 个能直接拉开「产品质感」差距的进阶模式。从氛围背景到 AI 流式输出，每一种都能单独撑起一个独立 demo。</p>
+  <div class="scroll-cue" onclick="document.getElementById('ch11').scrollIntoView({behavior:'smooth'})">
+    <span class="line"></span>
+    <span>Continue · 继续</span>
+  </div>
+</section>
+
+<section class="chapter" id="ch11">
+  <div class="chapter-head">
+    <div class="chapter-num">11</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Visual · 氛围背景</div>
+      <h2 class="chapter-title">极光渐变</h2>
+      <p class="chapter-desc">多个<strong>模糊的彩色圆形</strong>在深色背景上缓慢漂移，通过 <code>mix-blend-mode: screen</code> 叠加产生极光般的色彩流动。<strong>纯 CSS</strong>，零依赖，性能可控。</p>
+    </div>
+  </div>
+  <div class="demo-frame">
+    <div class="demo-label">demo · pure CSS</div>
+    <div class="aurora-demo" id="auroraDemo">
+      <div class="aurora-bg">
+        <div class="aurora-blob b1"></div>
+        <div class="aurora-blob b2"></div>
+        <div class="aurora-blob b3"></div>
+        <div class="aurora-blob b4"></div>
+      </div>
+      <div class="aurora-content">
+        <div class="aurora-tag">Hero Background</div>
+        <h2 class="aurora-title">Living Color.</h2>
+        <p class="aurora-sub">极光般的色彩缓慢呼吸 · 鼠标或手指移动还会跟随</p>
+        <div class="aurora-card">Glass card on top · 玻璃卡浮于其上</div>
+      </div>
+    </div>
+  </div>
+  <pre class="code-block"><span class="cmt">// 核心：4 个绝对定位的彩色圆形 + blur + screen 混合</span>
+.aurora-blob {
+  position: absolute;
+  width: <span class="num">60</span>vw; height: <span class="num">60</span>vw;
+  border-radius: <span class="num">50%</span>;
+  filter: blur(<span class="num">80</span>px) saturate(<span class="num">140%</span>);
+  mix-blend-mode: screen;        <span class="cmt">// 关键：色彩叠加</span>
+  animation: float <span class="num">22</span>s ease-in-out infinite;
+}
+
+<span class="cmt">// 每个 blob 不同色 + 不同 delay 错开</span>
+.b1 { background: <span class="num">#ff6b6b</span>; top: -<span class="num">15%</span>; left: -<span class="num">10%</span>; }
+.b2 { background: <span class="num">#4ecdc4</span>; top: <span class="num">30%</span>; right: -<span class="num">15%</span>; animation-delay: -<span class="num">7</span>s; }
+</pre>
+</section>
+
+<section class="chapter" id="ch12">
+  <div class="chapter-head">
+    <div class="chapter-num">12</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Visual · 科技感首屏</div>
+      <h2 class="chapter-title">粒子网络</h2>
+      <p class="chapter-desc">Canvas 绘制 <strong>500~1000 粒子</strong>，每个有独立的速度矢量；鼠标靠近时粒子被推开；近距离粒子之间画细线形成「网络」。</p>
+    </div>
+  </div>
+  <div class="demo-frame">
+    <div class="demo-label">demo · move cursor</div>
+    <div class="particle-demo">
+      <canvas id="particleCanvas"></canvas>
+      <div class="particle-content">
+        <div class="particle-tag">Particle Network</div>
+        <h2 class="particle-title">Connected.</h2>
+        <p class="particle-sub">鼠标或手指靠近粒子会被推开，形成动态交互网络。</p>
+      </div>
+    </div>
+  </div>
+  <pre class="code-block"><span class="cmt">// 核心：粒子类 + 鼠标排斥 + 邻近连线</span>
+<span class="kw">class</span> Particle {
+  update(w, h) {
+    <span class="kw">this</span>.x += <span class="kw">this</span>.vx;
+    <span class="kw">this</span>.y += <span class="kw">this</span>.vy;
+    <span class="kw">const</span> dx = <span class="kw">this</span>.x - mouse.x;
+    <span class="kw">const</span> dy = <span class="kw">this</span>.y - mouse.y;
+    <span class="kw">const</span> d = Math.sqrt(dx*dx + dy*dy);
+    <span class="kw">if</span> (d &lt; <span class="num">120</span>) {
+      <span class="kw">const</span> force = (<span class="num">120</span> - d) / <span class="num">120</span>;
+      <span class="kw">this</span>.x += (dx/d) * force * <span class="num">3</span>;
+      <span class="kw">this</span>.y += (dy/d) * force * <span class="num">3</span>;
+    }
+  }
+}
+</pre>
+</section>
+
+<section class="chapter" id="ch13">
+  <div class="chapter-head">
+    <div class="chapter-num">13</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Micro-interaction · 触觉反馈</div>
+      <h2 class="chapter-title">水波纹涟漪</h2>
+      <p class="chapter-desc">点击位置发出一个<strong>从触点扩散的圆环</strong>。本质是动态插入一个 <code>position:absolute</code> 的小圆，<code>transform: scale()</code> + <code>opacity</code> 同时过渡。</p>
+    </div>
+  </div>
+  <div class="demo-frame">
+    <div class="demo-label">demo · click buttons</div>
+    <div class="ripple-demo">
+      <div class="ripple-hint">Click any button · 点击任意按钮</div>
+      <button class="ripple-btn primary">Primary Action</button>
+      <button class="ripple-btn secondary">Secondary</button>
+      <button class="ripple-btn accent">Get Started →</button>
+    </div>
+  </div>
+  <pre class="code-block"><span class="cmt">// 核心：点击时插入 span + CSS 动画 + 自动清理</span>
+btn.addEventListener(<span class="str">'click'</span>, (e) =&gt; {
+  <span class="kw">const</span> rect = btn.getBoundingClientRect();
+  <span class="kw">const</span> ripple = document.createElement(<span class="str">'span'</span>);
+  ripple.className = <span class="str">'ripple'</span>;
+  ripple.style.left = (e.clientX - rect.left) + <span class="str">'px'</span>;
+  ripple.style.top  = (e.clientY - rect.top)  + <span class="str">'px'</span>;
+  btn.appendChild(ripple);
+  setTimeout(() =&gt; ripple.remove(), <span class="num">800</span>);
+});
+</pre>
+</section>
+
+<section class="chapter" id="ch14">
+  <div class="chapter-head">
+    <div class="chapter-num">14</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Scroll-driven · Linear / Stripe 风</div>
+      <h2 class="chapter-title">粘性滚动堆叠</h2>
+      <p class="chapter-desc">容器高度 = <strong>3 倍视口</strong>，内部 stage 用 <code>position: sticky</code> pin 住。多个面板依次登场/退场。</p>
+    </div>
+  </div>
+  <div class="demo-frame">
+    <div class="demo-label">demo · scroll the inner panel</div>
+    <div class="sticky-demo" id="stickyDemo">
+      <div class="sticky-container">
+        <div class="sticky-stage">
+          <div class="sticky-panel" data-i="0">
+            <div class="sticky-panel-content">
+              <div class="sticky-panel-num">01</div>
+              <div class="sticky-panel-tag">Step One · 策划</div>
+              <h3 class="sticky-panel-title">从问题出发</h3>
+              <p class="sticky-panel-desc">每个产品决策都源于一个真实问题。我们花两周时间调研，与 30 位用户深谈，把问题拆成可被解决的单元。</p>
+            </div>
+          </div>
+          <div class="sticky-panel" data-i="1">
+            <div class="sticky-panel-content">
+              <div class="sticky-panel-num">02</div>
+              <div class="sticky-panel-tag">Step Two · 设计</div>
+              <h3 class="sticky-panel-title">让方案可见</h3>
+              <p class="sticky-panel-desc">低保真草图 → 高保真原型 → 设计系统。每一稿都通过用户测试迭代，最终在 5 个候选方案中收敛出 1 个。</p>
+            </div>
+          </div>
+          <div class="sticky-panel" data-i="2">
+            <div class="sticky-panel-content">
+              <div class="sticky-panel-num">03</div>
+              <div class="sticky-panel-tag">Step Three · 上线</div>
+              <h3 class="sticky-panel-title">持续打磨</h3>
+              <p class="sticky-panel-desc">上线只是开始。每周看数据、每两周做用户访谈、每月一次大迭代 —— 让产品在真实使用中长出来。</p>
+            </div>
+          </div>
+        </div>
+        <div class="sticky-progress">
+          <div class="sticky-dot active"></div>
+          <div class="sticky-dot"></div>
+          <div class="sticky-dot"></div>
+        </div>
+        <div class="sticky-hint">↓ Scroll · 滚动</div>
+      </div>
+    </div>
+  </div>
+  <pre class="code-block"><span class="cmt">// 核心：sticky stage + 滚动驱动面板切换</span>
+.stage { position: sticky; top: <span class="num">0</span>; height: <span class="num">100</span>vh; }
+.panel { position: absolute; inset: <span class="num">0</span>; opacity: <span class="num">0</span>; transform: scale(<span class="num">0.85</span>); }
+
+<span class="cmt">// ScrollTrigger scrub 时间线</span>
+gsap.timeline({
+  scrollTrigger: { trigger: <span class="str">'.container'</span>, scrub: <span class="num">1</span>, pin: <span class="str">'.stage'</span> }
+})
+.to(<span class="str">'.panel-0'</span>, { opacity: <span class="num">1</span>, scale: <span class="num">1</span> }, <span class="num">0</span>)
+.to(<span class="str">'.panel-0'</span>, { opacity: <span class="num">0</span>, scale: <span class="num">0.85</span> }, <span class="num">0.5</span>)
+.to(<span class="str">'.panel-1'</span>, { opacity: <span class="num">1</span>, scale: <span class="num">1</span> }, <span class="num">0.5</span>);
+</pre>
+</section>
+
+<section class="chapter" id="ch15">
+  <div class="chapter-head">
+    <div class="chapter-num">15</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Transition · 路由切换</div>
+      <h2 class="chapter-title">FLIP 共享元素</h2>
+      <p class="chapter-desc">点击列表卡 → 它<strong>无缝变形</strong>为详情页的大图。本质是 <strong>F.L.I.P.</strong> 四步法：First → Last → Invert → Play。</p>
+    </div>
+  </div>
+  <div class="demo-frame">
+    <div class="demo-label">demo · click a card</div>
+    <div class="flip-demo">
+      <div class="flip-grid" id="flipGrid">
+        <div class="flip-card" data-i="0"><div class="flip-thumb"></div><div class="flip-card-label">Project Alpha</div></div>
+        <div class="flip-card" data-i="1"><div class="flip-thumb"></div><div class="flip-card-label">Project Beta</div></div>
+        <div class="flip-card" data-i="2"><div class="flip-thumb"></div><div class="flip-card-label">Project Gamma</div></div>
+        <div class="flip-card" data-i="3"><div class="flip-thumb"></div><div class="flip-card-label">Project Delta</div></div>
+        <div class="flip-card" data-i="4"><div class="flip-thumb"></div><div class="flip-card-label">Project Epsilon</div></div>
+        <div class="flip-card" data-i="5"><div class="flip-thumb"></div><div class="flip-card-label">Project Zeta</div></div>
+      </div>
+      <div class="flip-detail" id="flipDetail">
+        <div class="flip-detail-inner" id="flipInner">
+          <div class="flip-detail-image" id="flipImage"></div>
+          <button class="flip-detail-close" id="flipClose">×</button>
+          <div class="flip-detail-body">
+            <div class="flip-detail-tag">Case Study · 案例</div>
+            <h2 class="flip-detail-title" id="flipTitle">Project Alpha</h2>
+            <p class="flip-detail-text" id="flipText">一段关于这个项目的详细描述。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <pre class="code-block"><span class="cmt">// F.L.I.P. — 列表 → 详情 无缝过渡</span>
+<span class="kw">function</span> open(card) {
+  <span class="kw">const</span> first = card.getBoundingClientRect();   <span class="cmt">// First</span>
+  inner.style.left = first.left + <span class="str">'px'</span>;
+  inner.style.top  = first.top  + <span class="str">'px'</span>;
+  inner.style.width  = first.width  + <span class="str">'px'</span>;
+  inner.style.height = first.height + <span class="str">'px'</span>;
+  detail.classList.add(<span class="str">'open'</span>);
+  requestAnimationFrame(() =&gt; {                   <span class="cmt">// Last → Play</span>
+    inner.style.transition = <span class="str">'all 0.6s cubic-bezier(0.4,0,0.2,1)'</span>;
+    inner.style.left = <span class="str">'0'</span>; inner.style.top = <span class="str">'0'</span>;
+    inner.style.width = <span class="str">'100%'</span>; inner.style.height = <span class="str">'100%'</span>;
+  });
+}
+</pre>
+</section>
+
+<section class="chapter" id="ch16">
+  <div class="chapter-head">
+    <div class="chapter-num">16</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Browser Native · 浏览器原生</div>
+      <h2 class="chapter-title">View Transitions API</h2>
+      <p class="chapter-desc">Chrome 111+ 原生页面切换动画。<code>document.startViewTransition()</code> 把整个 DOM 更新包成一个自动 cross-fade + scale。</p>
+    </div>
+  </div>
+  <div class="demo-frame">
+    <div class="demo-label">demo · click switch (Chrome 111+)</div>
+    <div class="vt-demo light" id="vtDemo">
+      <div class="vt-content">
+        <div class="vt-tag">Theme Switch</div>
+        <h2 class="vt-title">Mode: <span class="vt-state" id="vtState">Light</span></h2>
+        <p class="vt-sub">点击下方按钮 —— 浏览器自动用 cross-fade + scale 过渡整页变化。Chrome 111+ 原生支持，零依赖。</p>
+        <div class="vt-cards">
+          <div class="vt-mini-card"></div>
+          <div class="vt-mini-card"></div>
+          <div class="vt-mini-card"></div>
+          <div class="vt-mini-card"></div>
+        </div>
+        <button class="vt-toggle" id="vtToggle">Switch Theme · 切换</button>
+      </div>
+    </div>
+  </div>
+  <pre class="code-block"><span class="cmt">// View Transitions API · Chrome 111+ 原生</span>
+toggle.addEventListener(<span class="str">'click'</span>, () =&gt; {
+  <span class="kw">if</span> (!document.startViewTransition) {
+    document.body.classList.toggle(<span class="str">'dark'</span>);
+    <span class="kw">return</span>;
+  }
+  document.startViewTransition(() =&gt; {
+    document.body.classList.toggle(<span class="str">'dark'</span>);
+  });
+});
+</pre>
+</section>
+
+<section class="chapter" id="ch17">
+  <div class="chapter-head">
+    <div class="chapter-num">17</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">AI Native · AI 产品专属</div>
+      <h2 class="chapter-title">AI 流式打字机</h2>
+      <p class="chapter-desc">AI 产品标配 —— 响应<strong>逐 token 流式</strong>显示。<strong>可变延迟</strong>（20~80ms 随机）让节奏像真人打字，标点处自动慢一拍。</p>
+    </div>
+  </div>
+  <div class="demo-frame">
+    <div class="demo-label">demo · replay typing</div>
+    <div class="typewriter-demo">
+      <div class="tw-window">
+        <div class="tw-header">
+          <div class="tw-dot"></div><div class="tw-dot y"></div><div class="tw-dot g"></div>
+        </div>
+        <div class="tw-messages" id="twMessages">
+          <div class="tw-message user">
+            <div class="tw-avatar user">U</div>
+            <div class="tw-bubble">如何设计一个有质感的着陆页？</div>
+          </div>
+          <div class="tw-message ai">
+            <div class="tw-avatar ai">AI</div>
+            <div class="tw-bubble"><span id="twText"></span><span class="tw-cursor" id="twCursor"></span></div>
+          </div>
+        </div>
+      </div>
+      <div class="tw-controls">
+        <button class="primary" id="twReplay">↻ Replay</button>
+        <button id="twFast">Fast · 快</button>
+        <button id="twSlow">Slow · 慢</button>
+      </div>
+    </div>
+  </div>
+  <pre class="code-block"><span class="cmt">// 核心：递归 setTimeout + 可变延迟 + 标点慢一拍</span>
+<span class="kw">function</span> typeWriter(text, el, speed = <span class="str">'normal'</span>) {
+  <span class="kw">let</span> i = <span class="num">0</span>;
+  <span class="kw">const</span> ranges = { fast: [<span class="num">10</span>,<span class="num">30</span>], normal: [<span class="num">20</span>,<span class="num">80</span>], slow: [<span class="num">80</span>,<span class="num">200</span>] };
+  <span class="kw">const</span> [min, max] = ranges[speed];
+  <span class="kw">function</span> tick() {
+    <span class="kw">if</span> (i &gt;= text.length) <span class="kw">return</span>;
+    el.textContent += text[i++];
+    <span class="kw">let</span> delay = min + Math.random() * (max - min);
+    <span class="kw">if</span> (<span class="str">'，。？！'</span>.includes(text[i-<span class="num">1</span>])) delay = max * <span class="num">2</span>;
+    setTimeout(tick, delay);
+  }
+  tick();
+}
+</pre>
+</section>
+
+<footer>
+  <div class="grid">
+    <div>
+      <h2>Vol. 02, <em>complete.</em></h2>
+      <p style="margin-top:24px;color:rgba(244,240,232,0.6);max-width:480px;">
+        加上第一辑的 10 个，共 <strong style="color:var(--accent)">17 种交互模式</strong>。挑你喜欢的几个做进产品，质感立刻不一样。
+      </p>
+    </div>
+    <div>
+      <h4>Vol. 02 新增</h4>
+      <ul>
+        <li><strong>⑪</strong> 极光渐变</li>
+        <li><strong>⑫</strong> 粒子网络</li>
+        <li><strong>⑬</strong> 水波纹涟漪</li>
+        <li><strong>⑭</strong> 粘性滚动堆叠</li>
+        <li><strong>⑮</strong> FLIP 共享元素</li>
+        <li><strong>⑯</strong> View Transitions</li>
+        <li><strong>⑰</strong> AI 流式打字机</li>
+      </ul>
+    </div>
+    <div>
+      <h4>推荐组合</h4>
+      <ul>
+        <li><strong>AI 产品</strong> · ⑫ + ⑰</li>
+        <li><strong>作品集</strong> · ⑪ + ⑭ + ⑮</li>
+        <li><strong>SPA 应用</strong> · ⑯ + ⑬</li>
+        <li><strong>落地页</strong> · ⑪ + ⑮ + ⑬</li>
+      </ul>
+    </div>
+  </div>
+  <div class="credits">
+    <span>Vol. 02 · Advanced UI</span>
+    <span>© 2025 · Beyond the Basics</span>
+  </div>
+</footer>
+
+<script>
+gsap.registerPlugin(ScrollTrigger);
+
+(function() {
+  const demo = document.querySelector('.aurora-demo');
+  const bg = demo.querySelector('.aurora-bg');
+  // pointermove 同时覆盖鼠标与手指拖动
+  demo.addEventListener('pointermove', (e) => {
+    const r = demo.getBoundingClientRect();
+    const dx = ((e.clientX - r.left) / r.width - 0.5) * 20;
+    const dy = ((e.clientY - r.top) / r.height - 0.5) * 20;
+    bg.style.transform = `translate(${dx}px, ${dy}px)`;
+  });
+  demo.addEventListener('pointerleave', () => {
+    bg.style.transform = 'translate(0, 0)';
+  });
+})();
+
+(function() {
+  const canvas = document.getElementById('particleCanvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  const mouse = { x: -9999, y: -9999 };
+  let dims = { w: 0, h: 0 };
+
+  function resize() {
+    const parent = canvas.parentElement;
+    const r = parent.getBoundingClientRect();
+    const w = Math.max(1, Math.floor(r.width));
+    const h = Math.max(1, Math.floor(r.height));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    dims = { w, h };
+  }
+
+  class Particle {
+    constructor(w, h) {
+      this.x = Math.random() * w;
+      this.y = Math.random() * h;
+      this.vx = (Math.random() - 0.5) * 0.4;
+      this.vy = (Math.random() - 0.5) * 0.4;
+      this.size = Math.random() * 1.8 + 0.8;
+    }
+    update(w, h) {
+      this.x += this.vx;
+      this.y += this.vy;
+      if (this.x < 0 || this.x > w) this.vx *= -1;
+      if (this.y < 0 || this.y > h) this.vy *= -1;
+      const dx = this.x - mouse.x;
+      const dy = this.y - mouse.y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < 120 && d > 0) {
+        const force = (120 - d) / 120;
+        this.x += (dx / d) * force * 3;
+        this.y += (dy / d) * force * 3;
+      }
+    }
+    draw() {
+      ctx.fillStyle = 'rgba(232, 122, 88, 0.9)';
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function init() {
+    particles = [];
+    const count = Math.min(90, Math.floor((dims.w * dims.h) / 2500));
+    for (let i = 0; i < count; i++) {
+      particles.push(new Particle(dims.w, dims.h));
+    }
+  }
+
+  function drawLines() {
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 90) {
+          ctx.strokeStyle = `rgba(232, 122, 88, ${0.35 * (1 - d / 90)})`;
+          ctx.lineWidth = 0.6;
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  function tick() {
+    ctx.clearRect(0, 0, dims.w, dims.h);
+    for (let i = 0; i < particles.length; i++) {
+      particles[i].update(dims.w, dims.h);
+      particles[i].draw();
+    }
+    drawLines();
+    if (running) requestAnimationFrame(tick);
+  }
+
+  let running = false;
+  function start() { if (running) return; running = true; tick(); }
+  function stop() { running = false; }
+
+  // Defer init until layout is settled
+  function bootstrap() {
+    resize();
+    if (dims.w < 2 || dims.h < 2) {
+      requestAnimationFrame(bootstrap);
+      return;
+    }
+    init();
+    start();
+  }
+  requestAnimationFrame(bootstrap);
+
+  // pointermove 同时覆盖鼠标与手指；不 preventDefault，页面滚动保持可用
+  canvas.parentElement.addEventListener('pointermove', (e) => {
+    const r = canvas.getBoundingClientRect();
+    mouse.x = e.clientX - r.left;
+    mouse.y = e.clientY - r.top;
+  }, { passive: true });
+  canvas.parentElement.addEventListener('pointerdown', (e) => {
+    const r = canvas.getBoundingClientRect();
+    mouse.x = e.clientX - r.left;
+    mouse.y = e.clientY - r.top;
+  }, { passive: true });
+  // 手指离开 / 触摸被浏览器接管为滚动时，收回排斥源
+  ['pointerleave', 'pointerup', 'pointercancel'].forEach(evt =>
+    canvas.parentElement.addEventListener(evt, () => {
+      mouse.x = -9999; mouse.y = -9999;
+    })
+  );
+
+  if (window.ResizeObserver) {
+    new ResizeObserver(() => { resize(); init(); }).observe(canvas.parentElement);
+  } else {
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => { resize(); init(); }, 200);
+    });
+  }
+
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver((entries) => {
+      entries.forEach(en => en.isIntersecting ? start() : stop());
+    }, { threshold: 0 }).observe(canvas.parentElement);
+  }
+})();
+
+(function() {
+  document.querySelectorAll('.ripple-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      const rect = this.getBoundingClientRect();
+      const size = Math.max(rect.width, rect.height) * 2;
+      const ripple = document.createElement('span');
+      ripple.className = 'ripple';
+      ripple.style.width = size + 'px';
+      ripple.style.height = size + 'px';
+      ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+      ripple.style.top  = (e.clientY - rect.top  - size / 2) + 'px';
+      this.appendChild(ripple);
+      ripple.getBoundingClientRect();
+      if (ripple.animate) {
+        ripple.animate(
+          [
+            { transform: 'scale(0.1)', opacity: 0.9, offset: 0 },
+            { transform: 'scale(1)',   opacity: 0,   offset: 1 }
+          ],
+          { duration: 600, easing: 'ease-out' }
+        ).onfinish = () => ripple.remove();
+      } else {
+        ripple.style.transition = 'transform 0.6s ease-out, opacity 0.6s ease-out';
+        requestAnimationFrame(() => { ripple.style.transform = 'scale(1)'; ripple.style.opacity = '0'; });
+        setTimeout(() => ripple.remove(), 700);
+      }
+    });
+  });
+})();
+
+(function() {
+  const demo = document.getElementById('stickyDemo');
+  const panels = demo.querySelectorAll('.sticky-panel');
+  const dots = demo.querySelectorAll('.sticky-dot');
+  const container = demo.querySelector('.sticky-container');
+
+  ScrollTrigger.create({
+    trigger: container,
+    scroller: demo,
+    start: 'top top',
+    end: 'bottom bottom',
+    scrub: 0.3,
+    onUpdate: (self) => {
+      const p = self.progress;
+      const totalPanels = panels.length;
+      const stage = p * totalPanels;
+      const activeIdx = Math.min(totalPanels - 1, Math.floor(stage));
+      const stageProgress = stage - activeIdx;
+
+      panels.forEach((panel, i) => {
+        let opacity, scale;
+        if (i === activeIdx) {
+          if (stageProgress < 0.5) {
+            opacity = stageProgress * 2;
+            scale = 0.85 + 0.15 * stageProgress * 2;
+          } else {
+            opacity = (1 - stageProgress) * 2;
+            scale = 1 - 0.15 * (stageProgress - 0.5) * 2;
+          }
+        } else {
+          opacity = 0;
+          scale = 0.85;
+        }
+        panel.style.opacity = opacity;
+        panel.style.transform = `scale(${scale})`;
+      });
+
+      dots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === activeIdx);
+      });
+    }
+  });
+})();
+
+(function() {
+  const grid = document.getElementById('flipGrid');
+  const detail = document.getElementById('flipDetail');
+  const inner = document.getElementById('flipInner');
+  const image = document.getElementById('flipImage');
+  const titleEl = document.getElementById('flipTitle');
+  const textEl = document.getElementById('flipText');
+  const closeBtn = document.getElementById('flipClose');
+
+  const labels = ['Project Alpha', 'Project Beta', 'Project Gamma', 'Project Delta', 'Project Epsilon', 'Project Zeta'];
+  const texts = [
+    '一段关于 Alpha 项目的详细描述 —— 我们如何从零构建一个全新的产品体验。',
+    '一段关于 Beta 项目的详细描述 —— 通过设计系统重构提升 40% 效率的真实故事。',
+    '一段关于 Gamma 项目的详细描述 —— 在三个月内从概念到上线的快速迭代。',
+    '一段关于 Delta 项目的详细描述 —— 用数据驱动的设计决策赢得用户增长。',
+    '一段关于 Epsilon 项目的详细描述 —— 为上市公司打造的品牌重塑项目。',
+    '一段关于 Zeta 项目的详细描述 —— 一次跨平台的完整交互设计案例。',
+  ];
+
+  let activeCard = null;
+
+  function open(i) {
+    const card = grid.querySelector(`.flip-card[data-i="${i}"]`);
+    if (!card) return;
+    activeCard = card;
+
+    image.className = 'flip-detail-image' + (i > 0 ? ' s' + (i+1) : '');
+    titleEl.textContent = labels[i];
+    textEl.textContent = texts[i];
+
+    const first = card.getBoundingClientRect();
+
+    inner.style.transition = 'none';
+    inner.style.left = first.left + 'px';
+    inner.style.top = first.top + 'px';
+    inner.style.width = first.width + 'px';
+    inner.style.height = first.height + 'px';
+    inner.style.borderRadius = '8px';
+
+    detail.classList.add('open');
+    card.style.opacity = '0';
+
+    void inner.offsetHeight;
+
+    requestAnimationFrame(() => {
+      inner.style.transition = 'all 0.55s cubic-bezier(0.4, 0, 0.2, 1)';
+      inner.style.left = '0';
+      inner.style.top = '0';
+      inner.style.width = '100%';
+      inner.style.height = '100%';
+      inner.style.borderRadius = '0';
+    });
+  }
+
+  function close() {
+    if (!activeCard) return;
+    const target = activeCard;
+    activeCard = null;
+
+    const targetRect = target.getBoundingClientRect();
+    detail.classList.remove('open');
+
+    inner.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+    inner.style.left = targetRect.left + 'px';
+    inner.style.top = targetRect.top + 'px';
+    inner.style.width = targetRect.width + 'px';
+    inner.style.height = targetRect.height + 'px';
+    inner.style.borderRadius = '8px';
+
+    setTimeout(() => { target.style.opacity = ''; }, 50);
+
+    setTimeout(() => {
+      inner.style.transition = 'none';
+      inner.style.left = '';
+      inner.style.top = '';
+      inner.style.width = '';
+      inner.style.height = '';
+      inner.style.borderRadius = '';
+    }, 520);
+  }
+
+  grid.addEventListener('click', (e) => {
+    const card = e.target.closest('.flip-card');
+    if (!card) return;
+    open(parseInt(card.dataset.i));
+  });
+
+  closeBtn.addEventListener('click', close);
+  detail.addEventListener('click', (e) => { if (e.target === detail) close(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && detail.classList.contains('open')) close();
+  });
+})();
+
+(function() {
+  const demo = document.getElementById('vtDemo');
+  const stateEl = document.getElementById('vtState');
+  const toggle = document.getElementById('vtToggle');
+
+  function switchTheme() {
+    const isDark = demo.classList.contains('dark');
+    const nextClass = isDark ? 'light' : 'dark';
+    const nextLabel = isDark ? 'Light' : 'Dark';
+
+    if (!document.startViewTransition) {
+      demo.classList.remove('dark');
+      demo.classList.add(nextClass);
+      stateEl.textContent = nextLabel;
+      return;
+    }
+
+    document.startViewTransition(() => {
+      demo.classList.remove('light', 'dark');
+      demo.classList.add(nextClass);
+      stateEl.textContent = nextLabel;
+    });
+  }
+
+  toggle.addEventListener('click', switchTheme);
+})();
+
+(function() {
+  const messages = [
+    '好的着陆页有三个核心要素：清晰的价值主张、视觉层次、和单一明确的 CTA。',
+    '从用户问题出发，先定义设计令牌（颜色、字体、间距），再搭建组件库。',
+    '推荐用 Grid + 8px 基准网格，配合 3-4 层排版节奏。',
+    '动画克制但精准，max 2 个主模式 + 1 个次要模式。',
+  ];
+
+  const textContainer = document.getElementById('twText');
+  const replayBtn = document.getElementById('twReplay');
+  const fastBtn = document.getElementById('twFast');
+  const slowBtn = document.getElementById('twSlow');
+
+  let speed = 'normal';
+  const speeds = { fast: [10, 30], normal: [20, 80], slow: [80, 200] };
+  let timers = [];
+
+  function clearAllTimers() {
+    timers.forEach(clearTimeout);
+    timers = [];
+  }
+
+  function typeMessage(msg, cb) {
+    textContainer.textContent = '';
+    let i = 0;
+    const [min, max] = speeds[speed];
+
+    function tick() {
+      if (i >= msg.length) { cb && cb(); return; }
+      const ch = msg[i];
+      textContainer.textContent += ch;
+      i++;
+      let delay = min + Math.random() * (max - min);
+      if ('，。？！、；：'.includes(ch)) delay = max * 2;
+      else if (',.;:!?'.includes(ch)) delay = max * 1.5;
+      const t = setTimeout(tick, delay);
+      timers.push(t);
+    }
+    tick();
+  }
+
+  function startSequence() {
+    clearAllTimers();
+    let idx = 0;
+    function next() {
+      if (idx >= messages.length) return;
+      typeMessage(messages[idx], () => {
+        idx++;
+        if (idx < messages.length) {
+          const t = setTimeout(next, 600);
+          timers.push(t);
+        }
+      });
+    }
+    next();
+  }
+
+  replayBtn.addEventListener('click', startSequence);
+  fastBtn.addEventListener('click', () => { speed = 'fast'; });
+  slowBtn.addEventListener('click', () => { speed = 'slow'; });
+
+  setTimeout(startSequence, 500);
+})();
+
+window.addEventListener('load', () => {
+  gsap.from('.hero h1', { y: 40, opacity: 0, duration: 1.2, ease: 'expo.out' });
+  gsap.from('.hero .meta, .hero .lede, .hero .scroll-cue', {
+    y: 20, opacity: 0, duration: 0.8, stagger: 0.1, ease: 'expo.out', delay: 0.2
+  });
+});
+</script>
+
+</body>
+</html>

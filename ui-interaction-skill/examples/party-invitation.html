@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1b1611">
+<title>来我家,开派对 · 邀请函</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..600&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<script>document.documentElement.classList.add('js');</script>
+<style>
+  :root {
+    /* ui-visual-skill · 配方 A 编辑暖夜(PATTERNS.md §E-A) */
+    --bg: #f7f3ea;
+    --bg-2: #efe9db;
+    --bg-3: #e4dbc8;
+    --dark: #1b1611;
+    --dark-2: #241d16;
+    --ink: #1a1510;
+    --ink-72: rgba(26, 21, 16, 0.72);
+    --ink-52: rgba(26, 21, 16, 0.52);
+    --rev: #f7f3ea;
+    --rev-72: rgba(247, 243, 234, 0.72);
+    --rev-52: rgba(247, 243, 234, 0.52);
+    --accent: #b4552f;
+    --accent-deep: #93401f;
+    --gold: #d9a862;
+    --green: #2f4a3d;
+    --border: rgba(26, 21, 16, 0.14);
+    --border-strong: rgba(26, 21, 16, 0.32);
+    --ink-soft: var(--ink-72);   /* 兼容旧引用 */
+    --muted: var(--ink-52);
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --serif: 'Fraunces', 'ZCOOL XiaoWei', 'Zcool XiaoWei', 'STSong', 'SimSun', serif;
+    --sans: 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button, a, [onclick] { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  ::selection { background: var(--ink); color: var(--bg); }
+
+  /* ============ HERO · ⑤ 文字揭示 + 暖色氛围 ============ */
+  .hero {
+    min-height: 100vh;
+    min-height: 100svh;
+    background: var(--dark);
+    color: var(--rev);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 96px 24px 120px;
+  }
+  .hero-blobs {
+    position: absolute; inset: -20%;
+    filter: blur(70px) saturate(135%);
+    pointer-events: none;
+  }
+  .blob {
+    position: absolute;
+    width: 55vmin; height: 55vmin;
+    border-radius: 50%;
+    mix-blend-mode: screen;
+    opacity: 0.8;
+    will-change: transform; /* 只动 transform,配合离屏暂停 */
+    animation: blobFloat 24s ease-in-out infinite alternate;
+  }
+  .blob.b1 { background: #b4552f; top: -8%; left: -6%; }
+  .blob.b2 { background: #d9a862; bottom: -12%; right: -8%; animation-delay: -8s; animation-duration: 28s; }
+  .blob.b3 { background: #2f4a3d; top: 40%; left: 55%; opacity: 0.55; animation-delay: -16s; }
+  @keyframes blobFloat {
+    from { transform: translate(0, 0) scale(1); }
+    to   { transform: translate(9%, -11%) scale(1.15); }
+  }
+  /* 移动端 GPU 降载:blur 减半、去掉第三团,但提高存在感补偿小圆面积
+     mix-blend-mode 在移动端是掉帧大户,普通透明度叠加在深底上视觉几乎一致 */
+  @media (max-width: 700px) {
+    .hero-blobs { filter: blur(30px) saturate(145%); }
+    .blob { mix-blend-mode: normal; opacity: 0.9; }
+    .blob.b1 { width: 72vmin; height: 72vmin; top: -4%; left: -14%; }
+    .blob.b2 { width: 64vmin; height: 64vmin; bottom: -6%; right: -16%; }
+    .blob.b3 { display: none; }
+  }
+
+  .hero-inner { position: relative; z-index: 2; max-width: 760px; }
+  .hero-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 28px;
+  }
+  .hero-title {
+    font-family: var(--serif);
+    font-weight: 400; /* XiaoWei 单字重,锋芒笔画自带粗细对比 */
+    font-size: clamp(56px, 14vw, 124px);
+    line-height: 1.16;
+    letter-spacing: 0.06em; /* 有锋芒的 display 字体需要更多呼吸空隙 */
+  }
+  /* 中文不用斜体(伪斜体=廉价),强调只靠色相 */
+  .hero-title .accent { color: #e2b48c; }
+  .hero-sub {
+    margin-top: 26px;
+    font-size: clamp(15px, 2.6vw, 18px);
+    color: var(--rev-72);
+    line-height: 1.9;
+  }
+  .hero-sub b { color: #fff; font-weight: 500; }
+  .hero-host {
+    margin-top: 30px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    color: var(--rev-52);
+  }
+  /* ⑤ 逐字揭示:默认可见;JS 决定播放时才装进遮罩 */
+  .ch { display: inline-block; overflow: hidden; vertical-align: bottom; }
+  .ch > span { display: inline-block; }
+  .hero.play .ch > span {
+    transform: translateY(115%);
+    animation: chIn 0.9s var(--ease) forwards;
+    animation-delay: calc(150ms + var(--i) * 70ms);
+  }
+  @keyframes chIn { to { transform: translateY(0); } }
+  .hero .fade-item { opacity: 1; }
+  .hero.play .fade-item {
+    opacity: 0;
+    animation: fadeUp 0.9s var(--ease) forwards;
+    animation-delay: calc(150ms + var(--n, 8) * 70ms + 120ms);
+  }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+
+  .scroll-cue {
+    position: absolute;
+    bottom: max(28px, env(safe-area-inset-bottom));
+    left: 50%; transform: translateX(-50%);
+    display: inline-flex; align-items: center; gap: 12px;
+    font-family: var(--mono); font-size: 10px;
+    letter-spacing: 0.22em; color: var(--rev-52);
+    text-transform: uppercase; cursor: pointer;
+    z-index: 3;
+  }
+  .scroll-cue .line {
+    width: 44px; height: 1px; background: rgba(247,243,234,0.4);
+    position: relative; overflow: hidden;
+  }
+  .scroll-cue .line::after {
+    content: ''; position: absolute; inset: 0; left: -100%;
+    background: var(--gold); animation: cue 2.4s ease-in-out infinite;
+  }
+  @keyframes cue { 0% { left: -100%; } 55% { left: 100%; } 100% { left: 100%; } }
+
+  /* ============ 倒计时 · ⑧ 数字翻牌 ============ */
+  .countdown {
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 56px 24px 64px;
+    text-align: center;
+  }
+  .cd-label {
+    font-family: var(--mono); font-size: 11px; color: var(--accent);
+    letter-spacing: 0.28em; text-transform: uppercase; margin-bottom: 30px;
+  }
+  .cd-row {
+    display: flex; justify-content: center; align-items: flex-start;
+    gap: clamp(10px, 3vw, 36px);
+    flex-wrap: wrap;           /* 极窄屏兜底:换行而不是溢出 */
+    max-width: 100%;
+  }
+  .cd-group { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .cd-digits { display: flex; }
+  .cd-digit {
+    width: 0.62em; height: 1.06em; overflow: hidden;
+    font-family: var(--serif);
+    font-size: clamp(44px, 11.5vw, 108px);
+    font-weight: 300;
+    line-height: 1.06;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .cd-strip {
+    display: flex; flex-direction: column;
+    transition: transform 0.55s var(--ease);
+    will-change: transform;
+  }
+  .cd-strip span {
+    height: 1.06em; line-height: 1.06;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cd-sep {
+    font-family: var(--serif); font-size: clamp(26px, 6.5vw, 76px);
+    color: var(--bg-3); line-height: 1.45; padding: 0 2px;
+    font-variant-numeric: tabular-nums;
+  }
+  .cd-unit {
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+    letter-spacing: 0.24em; text-transform: uppercase;
+  }
+  .cd-note { margin-top: 26px; font-size: 13px; color: var(--muted); display: none; }
+  .cd-note.show { display: block; }
+
+  /* ============ 通用区块 ============ */
+  section.block {
+    padding: 76px 24px;
+    border-bottom: 1px solid var(--border);
+    max-width: 860px; margin: 0 auto;
+  }
+  .block-tag {
+    font-family: var(--mono); font-size: 11px; color: var(--accent);
+    letter-spacing: 0.24em; text-transform: uppercase; margin-bottom: 14px;
+  }
+  .block-title {
+    font-family: var(--serif); font-weight: 400;
+    font-size: clamp(30px, 5.4vw, 44px);
+    letter-spacing: 0.01em; margin-bottom: 34px;
+  }
+  /* ② 滚动触发 */
+  .js .rv { opacity: 0; transform: translateY(26px); transition: opacity 0.7s var(--ease), transform 0.7s var(--ease); }
+  .js .rv.in { opacity: 1; transform: none; }
+
+  /* ============ 当晚安排 · 时间线 ============ */
+  .timeline { position: relative; padding-left: 26px; }
+  .timeline::before {
+    content: ''; position: absolute; left: 5px; top: 8px; bottom: 8px;
+    width: 1px; background: var(--border-strong);
+  }
+  .tl-item { position: relative; padding: 0 0 30px 14px; }
+  .tl-item:last-child { padding-bottom: 4px; }
+  .tl-item::before {
+    content: ''; position: absolute; left: -26px; top: 7px;
+    width: 11px; height: 11px; border-radius: 50%;
+    background: var(--bg); border: 2px solid rgba(26, 21, 16, 0.35);
+  }
+  .tl-time {
+    font-family: var(--mono); font-size: 12px; color: var(--ink-52);
+    letter-spacing: 0.12em; margin-bottom: 5px;
+  }
+  .tl-title { font-family: var(--serif); font-weight: 400; font-size: 17px; margin-bottom: 3px; }
+  .tl-desc { color: var(--ink-72); font-size: 14px; }
+
+  /* ============ 带什么 · 三张卡 ============ */
+  .bring-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 640px) { .bring-grid { grid-template-columns: 1fr; } }
+  .bring-card {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 26px 22px; text-align: center;
+  }
+  .bring-card .emoji { font-size: 34px; display: block; margin-bottom: 12px; }
+  .bring-card h4 { font-family: var(--serif); font-weight: 400; font-size: 16px; margin-bottom: 6px; }
+  .bring-card p { font-size: 13px; color: var(--muted); line-height: 1.7; }
+
+  /* ============ 地点 · ⑮ FLIP 卡片→详情 ============ */
+  .loc-card {
+    background: var(--dark); color: var(--rev);
+    border-radius: 10px; overflow: hidden;
+    cursor: pointer; position: relative;
+    display: flex; align-items: stretch;
+    min-height: 190px;
+    border: none; padding: 0; width: 100%; text-align: left;
+    transition: transform 0.3s var(--spring);
+  }
+  .loc-card:active { transform: scale(0.985); }
+  .loc-thumb {
+    flex: 0 0 38%;
+    background:
+      radial-gradient(circle at 60% 72%, rgba(217,168,98,0.85) 0 8%, transparent 9%),
+      radial-gradient(circle at 60% 72%, rgba(180,85,47,0.9) 0 16%, transparent 17%),
+      linear-gradient(180deg, #241d16 0%, #3a2c21 100%);
+    position: relative;
+  }
+  .loc-thumb::after {
+    content: '🏠'; position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 44px;
+  }
+  .loc-body { flex: 1; padding: 24px 22px; display: flex; flex-direction: column; justify-content: center; }
+  .loc-kicker {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.24em;
+    color: var(--gold); text-transform: uppercase; margin-bottom: 10px;
+  }
+  .loc-addr { font-family: var(--serif); font-size: 19px; line-height: 1.45; margin-bottom: 12px; }
+  .loc-cta {
+    font-family: var(--mono); font-size: 11px; color: var(--rev-52);
+    letter-spacing: 0.08em; margin-top: auto;
+  }
+  .loc-cta b { color: var(--gold); font-weight: 500; }
+
+  .loc-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(23, 19, 16, 0.5);
+    display: none;
+    -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+  }
+  .loc-overlay.open { display: block; }
+  .loc-detail {
+    position: fixed;
+    background: var(--bg);
+    border-radius: 14px;
+    overflow: hidden;
+    z-index: 201;
+    display: none; flex-direction: column;
+  }
+  .loc-detail.show { display: flex; }
+  .loc-detail.animating { transition: transform 0.5s var(--ease), border-radius 0.5s var(--ease), opacity 0.3s var(--ease); }
+  .loc-detail-head {
+    flex: 0 0 34%; min-height: 130px;
+    background:
+      radial-gradient(circle at 72% 78%, rgba(217,168,98,0.9) 0 6%, transparent 7%),
+      radial-gradient(circle at 72% 78%, rgba(180,85,47,0.95) 0 13%, transparent 14%),
+      linear-gradient(160deg, #241d16, #3a2c21 70%, #55371f);
+    position: relative; color: var(--rev);
+    display: flex; align-items: flex-end; padding: 20px 24px;
+  }
+  .loc-detail-head .loc-addr { color: #fff; margin: 0; font-size: clamp(19px, 4.6vw, 26px); }
+  .loc-close {
+    position: absolute; top: 14px; right: 14px;
+    width: 42px; height: 42px; border-radius: 50%;
+    background: rgba(247,243,234,0.14);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    border: 1px solid rgba(247,243,234,0.28); color: #fff;
+    font-size: 19px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .loc-detail-body {
+    flex: 1; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 24px 26px 28px;
+  }
+  .loc-line { display: flex; gap: 14px; padding: 13px 0; border-bottom: 1px solid var(--border); }
+  .loc-line:last-of-type { border-bottom: none; }
+  .loc-line .ico { font-size: 19px; flex-shrink: 0; width: 26px; text-align: center; }
+  .loc-line h5 { font-size: 14px; margin-bottom: 3px; }
+  .loc-line p { font-size: 13px; color: var(--ink-soft); }
+  .loc-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+  .btn {
+    border: 1px solid var(--border-strong); background: var(--bg);
+    color: var(--ink); border-radius: 4px;
+    padding: 13px 22px; font-size: 13px; font-weight: 500;
+    font-family: var(--sans); cursor: pointer; letter-spacing: 0.06em;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.25s var(--spring);
+    position: relative; overflow: hidden;
+  }
+  .btn:hover { background: var(--ink); color: var(--bg); }
+  .btn:active { transform: scale(0.96); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { background: var(--accent-deep); }
+  .ripple {
+    position: absolute; border-radius: 50%;
+    background: rgba(255,255,255,0.55); pointer-events: none;
+  }
+
+  /* ============ RSVP · ⑦ 弹性 + ⑬ 涟漪 ============ */
+  .rsvp-wrap { max-width: 600px; margin: 0 auto; }
+  .rsvp-card {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: 16px; padding: 34px 28px;
+    transition: transform 0.5s var(--spring);
+  }
+  .rsvp-card.shake { animation: shake 0.4s ease; }
+  @keyframes shake {
+    20% { transform: translateX(-7px); } 40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); } 80% { transform: translateX(3px); }
+  }
+  .field { margin-bottom: 22px; }
+  .field label {
+    display: block; font-family: var(--mono); font-size: 11px;
+    color: var(--ink-soft); letter-spacing: 0.16em; margin-bottom: 9px;
+  }
+  .field input[type=text] {
+    width: 100%; border: 1px solid var(--border-strong);
+    background: var(--bg); border-radius: 10px;
+    padding: 13px 15px; font-size: 16px; font-family: var(--sans);
+    color: var(--ink); outline: none; transition: border-color 0.2s ease;
+  }
+  .field input[type=text]:focus { border-color: var(--accent); }
+  .field .err { color: var(--accent-deep); font-size: 12px; margin-top: 7px; display: none; }
+  .field.error .err { display: block; }
+  .field.error input { border-color: var(--accent-deep); }
+
+  .seg { display: flex; gap: 10px; }
+  .seg button {
+    flex: 1; padding: 15px 10px; border-radius: 12px;
+    border: 1.5px solid var(--border-strong); background: var(--bg);
+    font-size: 14px; font-weight: 500; font-family: var(--sans);
+    color: var(--ink-soft); cursor: pointer;
+    transition: all 0.25s var(--spring);
+  }
+  .seg button .em { display: block; font-size: 21px; margin-bottom: 4px; }
+  .seg button.on {
+    border-color: var(--accent); background: rgba(198,91,60,0.09);
+    color: var(--accent-deep); transform: translateY(-2px);
+  }
+
+  .stepper {
+    display: flex; align-items: center; gap: 18px; justify-content: center;
+    opacity: 1; transition: opacity 0.3s ease;
+  }
+  .stepper.off { opacity: 0.35; pointer-events: none; }
+  .step-btn {
+    width: 52px; height: 52px; border-radius: 50%;
+    border: 1.5px solid var(--border-strong); background: var(--bg);
+    font-size: 21px; color: var(--ink); cursor: pointer;
+    transition: transform 0.35s var(--spring), background 0.2s ease, color 0.2s ease;
+    user-select: none; -webkit-user-select: none; touch-action: manipulation;
+  }
+  .step-btn:active { transform: scale(0.86); background: var(--ink); color: var(--bg); }
+  .step-num {
+    font-family: var(--serif); font-size: 40px; font-weight: 300;
+    min-width: 58px; text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .step-num.pop { animation: pop 0.35s var(--spring); }
+  @keyframes pop { 40% { transform: scale(1.22); } }
+  .step-label { font-size: 13px; color: var(--muted); }
+
+  .rsvp-submit {
+    width: 100%; margin-top: 8px; padding: 17px;
+    font-size: 15px; letter-spacing: 0.05em;
+  }
+  .rsvp-count {
+    margin-top: 18px; text-align: center;
+    font-size: 13px; color: var(--ink-52);
+  }
+  .rsvp-count b {
+    color: var(--ink); font-weight: 600;
+    font-family: var(--serif);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 回执成功态 */
+  .rsvp-done { text-align: center; padding: 14px 4px 6px; }
+  .rsvp-done .big { font-size: 46px; display: block; margin-bottom: 14px; }
+  .rsvp-done h3 { font-family: var(--serif); font-size: 25px; font-weight: 400; margin-bottom: 10px; }
+  .rsvp-done p { color: var(--ink-soft); font-size: 14px; margin-bottom: 4px; }
+  .rsvp-done .again {
+    margin-top: 18px; background: none; border: none;
+    color: var(--muted); font-size: 12px; text-decoration: underline;
+    cursor: pointer; font-family: var(--sans);
+  }
+
+  /* ============ FOOTER ============ */
+  footer {
+    background: var(--dark); color: var(--rev);
+    padding: 64px 24px calc(56px + env(safe-area-inset-bottom));
+    text-align: center;
+  }
+  .foot-sig {
+    font-family: var(--serif); font-size: clamp(26px, 5vw, 36px);
+    font-weight: 300; letter-spacing: 0.02em; margin-bottom: 8px;
+  }
+  /* 中文无斜体;金色只做点缀 */
+  .foot-sig em { font-style: normal; color: var(--gold); }
+  .foot-note { font-size: 13px; color: var(--rev-52); margin-bottom: 26px; }
+  .btn.ghost {
+    background: transparent; border-color: rgba(247,243,234,0.35); color: var(--rev);
+    text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn.ghost:hover { background: var(--rev); color: var(--ink); }
+  .foot-credits {
+    margin-top: 44px; padding-top: 20px;
+    border-top: 1px solid rgba(247,243,234,0.14);
+    font-family: var(--mono); font-size: 10px;
+    color: rgba(247,243,234,0.35); letter-spacing: 0.18em;
+  }
+
+  #confettiCanvas {
+    position: fixed; inset: 0; z-index: 300;
+    pointer-events: none; display: none;
+  }
+
+  /* ============ 无障碍:偏好减少动效 ============ */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .js .rv { opacity: 1; transform: none; }
+    .hero.play .ch > span { transform: none; }
+    .hero.play .fade-item { opacity: 1; }
+    .cd-strip { transition: none; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ HERO ============ -->
+<header class="hero" id="hero">
+  <div class="hero-blobs" aria-hidden="true">
+    <div class="blob b1"></div>
+    <div class="blob b2"></div>
+    <div class="blob b3"></div>
+  </div>
+  <div class="hero-inner">
+    <div class="hero-tag fade-item" style="--n:8">You're Invited · 诚邀出席</div>
+    <h1 class="hero-title" id="heroTitle"></h1>
+    <p class="hero-sub fade-item" style="--n:10" id="heroSub"></p>
+    <div class="hero-host fade-item" style="--n:11" id="heroHost"></div>
+  </div>
+  <div class="scroll-cue fade-item" style="--n:12" onclick="document.getElementById('countdown').scrollIntoView({behavior:'smooth'})">
+    <span class="line"></span><span>RSVP · 往下滑</span>
+  </div>
+</header>
+
+<!-- ============ 倒计时 ============ -->
+<section class="countdown" id="countdown">
+  <div class="cd-label">Countdown · 距离开场</div>
+  <div class="cd-row" id="cdRow" role="timer" aria-live="off"></div>
+  <p class="cd-note" id="cdNote">派对已经开场,直接来吧 🎉</p>
+</section>
+
+<!-- ============ 当晚安排 ============ -->
+<section class="block">
+  <div class="rv">
+    <div class="block-tag">The Night · 当晚安排</div>
+    <h2 class="block-title">从黄昏到深夜</h2>
+  </div>
+  <div class="timeline" id="timeline"></div>
+</section>
+
+<!-- ============ 带什么 ============ -->
+<section class="block">
+  <div class="rv">
+    <div class="block-tag">Bring · 带上这些</div>
+    <h2 class="block-title">三样就够</h2>
+  </div>
+  <div class="bring-grid">
+    <div class="bring-card rv">
+      <span class="emoji">🥤</span>
+      <h4>一瓶你最爱的饮料</h4>
+      <p>酒、气泡水、果汁都行,顺便分享它的故事</p>
+    </div>
+    <div class="bring-card rv">
+      <span class="emoji">🎵</span>
+      <h4>一首想分享的歌</h4>
+      <p>进场扫码加入当晚歌单,你的 BGM 你做主</p>
+    </div>
+    <div class="bring-card rv">
+      <span class="emoji">😊</span>
+      <h4>好心情和好胃口</h4>
+      <p>吃的喝的我们都准备了,人来就好</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 地点 ============ -->
+<section class="block">
+  <div class="rv">
+    <div class="block-tag">Where · 地点</div>
+    <h2 class="block-title">来这个门牌找我</h2>
+  </div>
+  <button class="loc-card rv" id="locCard" aria-haspopup="dialog">
+    <span class="loc-thumb" aria-hidden="true"></span>
+    <span class="loc-body">
+      <span class="loc-kicker">My Place · 我家</span>
+      <span class="loc-addr" id="locAddrShort"></span>
+      <span class="loc-cta">地铁 / 停车 / 复制地址 —— <b>点开查看 →</b></span>
+    </span>
+  </button>
+  <div class="loc-overlay" id="locOverlay"></div>
+  <div class="loc-detail" id="locDetail" role="dialog" aria-modal="true" aria-label="地点详情">
+    <div class="loc-detail-head">
+      <button class="loc-close" id="locClose" aria-label="关闭">×</button>
+      <span class="loc-addr" id="locAddrFull"></span>
+    </div>
+    <div class="loc-detail-body">
+      <div class="loc-line"><span class="ico">🚇</span><div><h5>地铁</h5><p id="locMetro"></p></div></div>
+      <div class="loc-line"><span class="ico">🚕</span><div><h5>打车 / 自驾</h5><p id="locParking"></p></div></div>
+      <div class="loc-line"><span class="ico">🚪</span><div><h5>进门攻略</h5><p id="locDoor"></p></div></div>
+      <div class="loc-actions">
+        <button class="btn primary" id="copyAddr">复制地址</button>
+        <a class="btn" id="mapLink" target="_blank" rel="noopener">打开地图</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RSVP ============ -->
+<section class="block" id="rsvp">
+  <div class="rv">
+    <div class="block-tag">RSVP · 回执</div>
+    <h2 class="block-title">所以,你来吗?</h2>
+  </div>
+  <div class="rsvp-wrap rv">
+    <div class="rsvp-card" id="rsvpCard">
+      <form id="rsvpForm" novalidate>
+        <div class="field" id="nameField">
+          <label for="guestName">你的名字 · NAME</label>
+          <input type="text" id="guestName" placeholder="怎么称呼你?" autocomplete="name" maxlength="20">
+          <div class="err">麻烦留下称呼,主人好写迎宾牌 ✍️</div>
+        </div>
+        <div class="field">
+          <label>出席与否 · ATTENDANCE</label>
+          <div class="seg">
+            <button type="button" id="optYes" class="on"><span class="em">🎉</span>必须到场</button>
+            <button type="button" id="optNo"><span class="em">🥲</span>下次一定</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>携伴人数 · COMPANIONS</label>
+          <div class="stepper" id="stepper">
+            <button type="button" class="step-btn" id="stepMinus" aria-label="减少人数">−</button>
+            <span class="step-num" id="stepNum">0</span>
+            <button type="button" class="step-btn" id="stepPlus" aria-label="增加人数">＋</button>
+            <span class="step-label">位同伴</span>
+          </div>
+        </div>
+        <button type="submit" class="btn primary rsvp-submit" id="rsvpSubmit">送出回执 →</button>
+        <p class="rsvp-count">已有 <b id="rsvpTotal">12</b> 位朋友确认出席</p>
+      </form>
+      <div class="rsvp-done" id="rsvpDone" hidden>
+        <span class="big">🎉</span>
+        <h3 id="doneTitle">回执已送达!</h3>
+        <p id="doneText"></p>
+        <p>10 月 17 日,家里见。</p>
+        <button class="again" id="rsvpAgain" type="button">修改回执</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="foot-sig" id="footSig"></div>
+  <p class="foot-note">名额有限,回执从速 · 有任何问题随时私信主人</p>
+  <a class="btn ghost" id="icsLink" download="party-invite.ics">📅 添加到日历</a>
+  <div class="foot-credits">SEE YOU AT THE PARTY · OCT 2026</div>
+</footer>
+
+<canvas id="confettiCanvas" aria-hidden="true"></canvas>
+
+<script>
+/* =====================================================
+ * 配置区 —— 改这里就能变成你自己的邀请函
+ * ===================================================== */
+var CONFIG = {
+  titleLines: ['来我家', '开派对'],
+  host: '主人:小屋夫妇',
+  sub: '<b>10 月 17 日 星期六 19:00</b> 入场,管饭管酒管音乐,<br>深夜不止,随时可以躺沙发。',
+  date: '2026-10-17T19:00:00',          // 倒计时 & 日历用
+  durationHours: 5,                      // 日历时长
+  address: '上海市徐汇区永康路 88 号 · 永康府 3F',
+  metro: '1 号线 / 10 号线「陕西南路站」2 号口,步行 8 分钟;导航搜「永康路 88 号」。',
+  parking: '小区车位紧张,建议地铁或打车;打车直接到楼下,报门牌号即可。',
+  door: '进小区大门右转第 2 栋,按 0302 呼叫开门;迟到也没关系,有人守门到 23:00。',
+  baseRsvp: 12                           // 已有报名人数(演示值)
+};
+
+var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+var $ = function (s) { return document.querySelector(s); };
+var pad2 = function (n) { return (n < 10 ? '0' : '') + n; };
+
+/* ============ Hero:渲染文案 + ⑤ 逐字揭示 ============ */
+(function () {
+  var title = $('#heroTitle');
+  var html = '';
+  var idx = 0;
+  CONFIG.titleLines.forEach(function (line, li) {
+    for (var i = 0; i < line.length; i++) {
+      var chr = line[i];
+      var accent = (line === CONFIG.titleLines[CONFIG.titleLines.length - 1] && i >= line.length - 2);
+      html += '<span class="ch" style="--i:' + (idx++) + '"><span' +
+              (accent ? ' class="accent"' : '') + '>' + chr + '</span></span>';
+    }
+    if (li < CONFIG.titleLines.length - 1) html += '<br>';
+  });
+  title.innerHTML = html;
+  $('#heroSub').innerHTML = CONFIG.sub;
+  $('#heroHost').textContent = CONFIG.host;
+  $('#footSig').innerHTML = CONFIG.titleLines[1].slice(0, 1) + '夜见,<em>别迟到。</em>';
+
+  var hero = $('#hero');
+  // 逐字揭示仅在有动效许可时播放;否则保持直接可见
+  if (!reduced) requestAnimationFrame(function () { hero.classList.add('play'); });
+})();
+
+/* ============ ⑧ 倒计时:数字翻牌(每位一条 0-9 垂直数字带) ============ */
+(function () {
+  var target = new Date(CONFIG.date).getTime();
+  var row = $('#cdRow');
+  var groups = [
+    { key: 'day',  label: 'Days · 天' },
+    { key: 'hour', label: 'Hours · 时' },
+    { key: 'min',  label: 'Min · 分' },
+    { key: 'sec',  label: 'Sec · 秒' }
+  ];
+  var slots = {}; // key -> [stripEls]
+
+  groups.forEach(function (g, gi) {
+    var wrap = document.createElement('div');
+    wrap.className = 'cd-group';
+    var digits = document.createElement('div');
+    digits.className = 'cd-digits';
+    var strips = [];
+    for (var d = 0; d < 2; d++) {
+      var slot = document.createElement('div');
+      slot.className = 'cd-digit';
+      var strip = document.createElement('div');
+      strip.className = 'cd-strip';
+      for (var n = 0; n <= 9; n++) {
+        var s = document.createElement('span');
+        s.textContent = n;
+        strip.appendChild(s);
+      }
+      strip.style.transform = 'translateY(0)';
+      slot.appendChild(strip);
+      digits.appendChild(slot);
+      strips.push(strip);
+    }
+    slots[g.key] = strips;
+    wrap.appendChild(digits);
+    var unit = document.createElement('div');
+    unit.className = 'cd-unit';
+    unit.textContent = g.label;
+    wrap.appendChild(unit);
+    row.appendChild(wrap);
+    if (gi < groups.length - 1) {
+      var sep = document.createElement('div');
+      sep.className = 'cd-sep';
+      sep.textContent = ':';
+      row.appendChild(sep);
+    }
+  });
+
+  function setDigit(strip, n) {
+    /* 数字带总高 = 10 个槽,translate 百分比基于自身高度 → 与槽位精确对齐
+       (不能用 em:em 是字号,槽位是 1.06em,每位累积 6% 偏移导致裁切) */
+    strip.style.transform = 'translateY(-' + (n * 10) + '%)';
+  }
+  function tick() {
+    var diff = target - Date.now();
+    if (diff <= 0) {
+      groups.forEach(function (g) {
+        slots[g.key].forEach(function (st) { setDigit(st, 0); });
+      });
+      $('#cdNote').classList.add('show');
+      return;
+    }
+    var sec = Math.floor(diff / 1000);
+    var vals = {
+      day: Math.floor(sec / 86400),
+      hour: Math.floor(sec % 86400 / 3600),
+      min: Math.floor(sec % 3600 / 60),
+      sec: sec % 60
+    };
+    groups.forEach(function (g) {
+      var v = Math.min(vals[g.key], 99);
+      var str = pad2(v);
+      slots[g.key].forEach(function (st, i) { setDigit(st, +str[i]); });
+    });
+    setTimeout(tick, 1000 - (Date.now() % 1000) + 20);
+  }
+  tick();
+})();
+
+/* ============ 当晚时间线(数据驱动渲染) ============ */
+(function () {
+  var items = [
+    ['19:00', '开门迎宾', '签到、挂外套、领饮品,先聊起来'],
+    ['19:30', '举杯开场', '主人致辞 3 分钟,之后自由社交'],
+    ['20:00', '开饭', '火锅 + 烧烤双线,素食也备了选项'],
+    ['21:00', '游戏时间', '桌游 / Switch / 卡拉 OK,三区自选'],
+    ['22:30', '深夜场', '音乐调暗,电影和夜宵上线'],
+    ['00:00', '温柔散场', '代驾电话已备好,到家报平安']
+  ];
+  $('#timeline').innerHTML = items.map(function (it, i) {
+    return '<div class="tl-item rv" style="transition-delay:' + (i % 3) * 60 + 'ms">' +
+      '<div class="tl-time">' + it[0] + '</div>' +
+      '<div class="tl-title">' + it[1] + '</div>' +
+      '<div class="tl-desc">' + it[2] + '</div></div>';
+  }).join('');
+})();
+
+/* ============ ② 滚动触发:可重入(滚出视口下方即重置,回看重新播放) ============ */
+(function () {
+  var els = document.querySelectorAll('.rv');
+  if (!('IntersectionObserver' in window) || reduced) {
+    els.forEach(function (el) { el.classList.add('in'); });
+    return;
+  }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (en.isIntersecting) {
+        en.target.classList.add('in');
+      } else if (en.boundingClientRect.top > 0) {
+        // 只在"从下方离开视口"时重置;向上滚过(元素到视口上方)保持显示,避免回看闪烁
+        en.target.classList.remove('in');
+      }
+    });
+  }, { threshold: 0.15, rootMargin: '0px 0px -6% 0px' });
+  els.forEach(function (el) { io.observe(el); });
+})();
+
+/* ============ 光晕离屏自动暂停 + hero 滚动视差(持续生命感,离屏零开销) ============ */
+(function () {
+  var hero = $('#hero');
+  var inner = hero.querySelector('.hero-inner');
+  var blobs = hero.querySelectorAll('.blob');
+
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        var state = en.isIntersecting ? 'running' : 'paused';
+        blobs.forEach(function (b) { b.style.animationPlayState = state; });
+      });
+    }, { threshold: 0 }).observe(hero);
+  }
+
+  if (reduced) return;
+  var ticking = false;
+  window.addEventListener('scroll', function () {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function () {
+      ticking = false;
+      var y = window.scrollY;
+      var limit = window.innerHeight;
+      if (y <= limit) {
+        // ① 视差:内容慢速上移 + 渐隐,滚回首屏时反向恢复
+        inner.style.transform = 'translateY(' + (y * 0.18).toFixed(1) + 'px)';
+        inner.style.opacity = String(Math.max(0, 1 - y / (limit * 0.7)));
+      }
+    });
+  }, { passive: true });
+})();
+
+/* ============ ⑮ FLIP:地点卡片 → 全屏详情 ============ */
+(function () {
+  var card = $('#locCard'), overlay = $('#locOverlay'), detail = $('#locDetail');
+  var open = false, animating = false;
+  var SCROLL_Y = 0;
+
+  $('#locAddrShort').textContent = CONFIG.address;
+  $('#locAddrFull').textContent = CONFIG.address;
+  $('#locMetro').textContent = CONFIG.metro;
+  $('#locParking').textContent = CONFIG.parking;
+  $('#locDoor').textContent = CONFIG.door;
+  $('#mapLink').href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(CONFIG.address);
+
+  function lockScroll() {
+    SCROLL_Y = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = -SCROLL_Y + 'px';
+    document.body.style.left = '0'; document.body.style.right = '0';
+  }
+  function unlockScroll() {
+    document.body.style.position = ''; document.body.style.top = '';
+    document.body.style.left = ''; document.body.style.right = '';
+    window.scrollTo(0, SCROLL_Y);
+  }
+
+  /* 反演 FLIP:面板固定全屏,用 translate+scale 从卡片位置"长"出来。
+     纯 transform = 合成器动画,移动端不掉帧(left/top/width/height 每帧重排已弃用) */
+  function invertedTransform(rect) {
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var sx = rect.width / vw, sy = rect.height / vh;
+    var tx = rect.left + rect.width / 2 - vw / 2;
+    var ty = rect.top + rect.height / 2 - vh / 2;
+    return 'translate(' + tx.toFixed(1) + 'px, ' + ty.toFixed(1) + 'px) scale(' + sx.toFixed(4) + ', ' + sy.toFixed(4) + ')';
+  }
+
+  function openDetail() {
+    if (open || animating) return;
+    open = true; animating = true;
+    var first = card.getBoundingClientRect();
+    detail.classList.add('show');
+    detail.style.transition = 'none';
+    detail.style.left = '0'; detail.style.top = '0';
+    detail.style.width = '100%'; detail.style.height = '100%';
+    detail.style.borderRadius = '0px';
+    detail.style.transformOrigin = 'center center';
+    detail.style.transform = invertedTransform(first);
+    overlay.classList.add('open');
+    lockScroll();
+    card.style.visibility = 'hidden';
+    void detail.offsetHeight;
+    requestAnimationFrame(function () {
+      detail.classList.add('animating');
+      detail.style.transform = 'translate(0, 0) scale(1, 1)';
+      setTimeout(function () {
+        detail.classList.remove('animating');
+        detail.style.transform = '';
+        animating = false;
+        $('#locClose').focus();
+      }, 520);
+    });
+  }
+
+  function closeDetail() {
+    if (!open || animating) return;
+    animating = true;
+    var last = card.getBoundingClientRect();
+    detail.classList.add('animating');
+    detail.style.transform = invertedTransform(last);
+    overlay.classList.remove('open');
+    unlockScroll();
+    card.style.visibility = '';
+    setTimeout(function () {
+      detail.classList.remove('animating', 'show');
+      detail.style.transition = '';
+      detail.style.left = detail.style.top = '';
+      detail.style.width = detail.style.height = '';
+      detail.style.borderRadius = '';
+      detail.style.transform = '';
+      animating = false; open = false;
+    }, 520);
+  }
+
+  card.addEventListener('click', openDetail);
+  $('#locClose').addEventListener('click', closeDetail);
+  overlay.addEventListener('click', closeDetail);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && open) closeDetail();
+  });
+})();
+
+/* 复制地址 */
+$('#copyAddr').addEventListener('click', function () {
+  var addr = CONFIG.address;
+  function ok() {
+    var btn = $('#copyAddr');
+    var old = btn.textContent;
+    btn.textContent = '已复制 ✓';
+    setTimeout(function () { btn.textContent = old; }, 1600);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(addr).then(ok, function () { window.prompt('长按复制地址:', addr); });
+  } else {
+    window.prompt('长按复制地址:', addr);
+  }
+});
+
+/* ============ ⑬ 涟漪:所有 .btn 按下时从触点扩散 ============ */
+document.querySelectorAll('.btn').forEach(function (btn) {
+  btn.addEventListener('pointerdown', function (e) {
+    var r = btn.getBoundingClientRect();
+    var size = Math.max(r.width, r.height) * 2;
+    var rip = document.createElement('span');
+    rip.className = 'ripple';
+    rip.style.width = rip.style.height = size + 'px';
+    rip.style.left = (e.clientX - r.left - size / 2) + 'px';
+    rip.style.top = (e.clientY - r.top - size / 2) + 'px';
+    btn.appendChild(rip);
+    if (rip.animate) {
+      rip.animate(
+        [{ transform: 'scale(0.1)', opacity: 0.7 }, { transform: 'scale(1)', opacity: 0 }],
+        { duration: 550, easing: 'ease-out' }
+      ).onfinish = function () { rip.remove(); };
+    } else {
+      setTimeout(function () { rip.remove(); }, 600);
+    }
+  });
+});
+
+/* ============ RSVP:⑦ 弹性步进 + 提交 ============ */
+(function () {
+  var companions = 0, attending = true;
+  var num = $('#stepNum');
+  var saved = null;
+  try { saved = JSON.parse(localStorage.getItem('party-rsvp') || 'null'); } catch (e) {}
+
+  function renderCount() {
+    var total = CONFIG.baseRsvp + (saved && saved.attending ? 1 + saved.companions : 0);
+    var el = $('#rsvpTotal');
+    if (reduced || !requestAnimationFrame) { el.textContent = total; return; }
+    // 数字滚动到位(一次性,expo-out 手写)
+    var from = +el.textContent || 0, t0 = performance.now();
+    function step(t) {
+      var p = Math.min(1, (t - t0) / 900);
+      var e = 1 - Math.pow(2, -10 * p);
+      el.textContent = Math.round(from + (total - from) * e);
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  function setCompanions(v, pop) {
+    companions = Math.max(0, Math.min(5, v));
+    num.textContent = companions;
+    if (pop && !reduced) {
+      num.classList.remove('pop');
+      void num.offsetWidth;
+      num.classList.add('pop');
+    }
+  }
+  $('#stepMinus').addEventListener('click', function () { setCompanions(companions - 1, true); });
+  $('#stepPlus').addEventListener('click', function () { setCompanions(companions + 1, true); });
+
+  $('#optYes').addEventListener('click', function () {
+    attending = true;
+    $('#optYes').classList.add('on'); $('#optNo').classList.remove('on');
+    $('#stepper').classList.remove('off');
+    $('#rsvpSubmit').textContent = '送出回执 →';
+  });
+  $('#optNo').addEventListener('click', function () {
+    attending = false;
+    $('#optNo').classList.add('on'); $('#optYes').classList.remove('on');
+    $('#stepper').classList.add('off');
+    $('#rsvpSubmit').textContent = '遗憾送达 🥲';
+  });
+
+  function showDone(data) {
+    $('#rsvpForm').hidden = true;
+    $('#rsvpDone').hidden = false;
+    $('#doneTitle').textContent = data.attending ? '回执已送达!' : '收到,下次一定!';
+    var when = data.attending
+      ? '我们给 ' + data.name + (data.companions > 0 ? ' 和 ' + data.companions + ' 位同伴' : '') + ' 留好了位置。'
+      : '会有下一次的,' + data.name + '。';
+    $('#doneText').textContent = when;
+  }
+
+  $('#rsvpForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var name = $('#guestName').value.trim();
+    if (!name) {
+      $('#nameField').classList.add('error');
+      $('#guestName').focus();
+      var card = $('#rsvpCard');
+      card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+      return;
+    }
+    $('#nameField').classList.remove('error');
+    saved = { name: name, attending: attending, companions: attending ? companions : 0 };
+    try { localStorage.setItem('party-rsvp', JSON.stringify(saved)); } catch (err) {}
+    showDone(saved);
+    renderCount();
+    if (attending) fireConfetti($('#rsvpSubmit'));
+  });
+  $('#guestName').addEventListener('input', function () {
+    $('#nameField').classList.remove('error');
+  });
+  $('#rsvpAgain').addEventListener('click', function () {
+    $('#rsvpDone').hidden = true;
+    $('#rsvpForm').hidden = false;
+    if (saved) {
+      $('#guestName').value = saved.name;
+      setCompanions(saved.companions, false);
+      if (saved.attending) $('#optYes').click(); else $('#optNo').click();
+    }
+  });
+
+  // 回访:已填过则直接展示回执
+  if (saved && saved.name) {
+    $('#guestName').value = saved.name;
+    setCompanions(saved.companions || 0, false);
+    if (saved.attending === false) $('#optNo').click();
+  }
+  renderCount();
+})();
+
+/* ============ 庆祝彩带(提交成功时从按钮位置喷出) ============ */
+function fireConfetti(anchorEl) {
+  if (reduced) return; // 无动效偏好:跳过,仅展示成功卡
+  var canvas = document.getElementById('confettiCanvas');
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = innerWidth * dpr; canvas.height = innerHeight * dpr;
+  canvas.style.display = 'block';
+  var ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  var r = anchorEl.getBoundingClientRect();
+  var ox = r.left + r.width / 2, oy = r.top;
+  var colors = ['#b4552f', '#d9a862', '#2f4a3d', '#e2b48c', '#f7f3ea'];
+  var parts = [];
+  for (var i = 0; i < 130; i++) {
+    var ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.5;
+    var sp = 7 + Math.random() * 8;
+    parts.push({
+      x: ox, y: oy,
+      vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
+      w: 5 + Math.random() * 5, h: 8 + Math.random() * 6,
+      rot: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.3,
+      color: colors[i % colors.length],
+      life: 130 + Math.random() * 40
+    });
+  }
+  var stopped = false;
+  document.addEventListener('visibilitychange', function () { if (document.hidden) stopped = true; });
+  (function frame() {
+    if (stopped) { canvas.style.display = 'none'; return; }
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    var alive = false;
+    parts.forEach(function (p) {
+      if (p.life <= 0) return;
+      alive = true;
+      p.life--;
+      p.vy += 0.16; p.vx *= 0.99; p.vy *= 0.995;
+      p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.globalAlpha = Math.min(1, p.life / 30);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    });
+    if (alive) requestAnimationFrame(frame);
+    else canvas.style.display = 'none';
+  })();
+}
+
+/* ============ 添加到日历(.ics 下载) ============ */
+(function () {
+  var d = new Date(CONFIG.date);
+  function fmt(dt) {
+    return dt.getFullYear() + pad2(dt.getMonth() + 1) + pad2(dt.getDate()) +
+           'T' + pad2(dt.getHours()) + pad2(dt.getMinutes()) + '00';
+  }
+  var end = new Date(d.getTime() + CONFIG.durationHours * 3600 * 1000);
+  var ics = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//party-invite//CN', 'BEGIN:VEVENT',
+    'UID:' + Date.now() + '@party-invite',
+    'DTSTAMP:' + fmt(new Date()),
+    'DTSTART:' + fmt(d),
+    'DTEND:' + fmt(end),
+    'SUMMARY:' + CONFIG.titleLines.join('') + ' 🎉',
+    'LOCATION:' + CONFIG.address.replace(/,/g, '\\,'),
+    'DESCRIPTION:记得 RSVP~ 主人:见邀请函',
+    'END:VEVENT', 'END:VCALENDAR'
+  ].join('\r\n');
+  $('#icsLink').href = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
+})();
+</script>
+
+</body>
+</html>
