@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>10 种高级 UI 交互 · 第三辑</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..900&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13/dist/ScrollTrigger.min.js"></script>
+<style>
+  :root {
+    --bg: #f4f0e8;
+    --bg-2: #ebe5d6;
+    --bg-3: #ddd5c2;
+    --ink: #161616;
+    --ink-soft: #4a4742;
+    --muted: #9a958c;
+    --accent: #b85940;
+    --accent-2: #2d4a3e;
+    --gold: #c9a368;
+    --border: rgba(22, 22, 22, 0.14);
+    --border-strong: rgba(22, 22, 22, 0.32);
+    --serif: 'Fraunces', 'Times New Roman', serif;
+    --sans: 'Inter', -apple-system, sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    cursor: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* 触摸设备(含宽屏平板 / 触屏笔记本):恢复原生光标。
+     用 hover/pointer 能力判断，而不是屏幕宽度 —— iPad Pro 横屏 >900px 也能正确命中 */
+  @media (hover: none), (pointer: coarse), (max-width: 900px) {
+    body, .cursor-demo { cursor: auto; }
+    .cursor-dot, .cursor-ring, .cursor-trail { display: none !important; }
+    .cursor-hint .mouse-only { display: none; }
+    .cursor-hint .touch-only { display: inline; }
+  }
+  .cursor-hint .touch-only { display: none; }
+  /* 触摸设备：去掉双击缩放延迟 */
+  button, a, [onclick], .cmdk-trigger, .blob-key, .noise-toggle, .cmdk-item {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  ::selection { background: var(--ink); color: var(--bg); }
+  header.topnav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(244, 240, 232, 0.85);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+    height: 56px;
+    display: flex; align-items: center;
+    padding: 0 32px;
+  }
+  header.topnav .brand {
+    font-family: var(--serif); font-weight: 500; font-size: 17px;
+    letter-spacing: -0.01em; margin-right: 48px;
+  }
+  header.topnav .brand em { font-style: italic; color: var(--accent); font-weight: 400; }
+  header.topnav nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+  header.topnav nav::-webkit-scrollbar { display: none; }
+  header.topnav nav a {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--ink-soft); text-decoration: none;
+    padding: 6px 10px; border-radius: 4px; white-space: nowrap;
+    transition: all 0.2s ease; letter-spacing: 0.02em;
+  }
+  header.topnav nav a:hover { background: rgba(22,22,22,0.06); color: var(--ink); }
+  header.topnav nav a span { color: var(--muted); margin-right: 4px; }
+
+  /* ========== CUSTOM CURSOR ========== */
+  .cursor-dot, .cursor-ring {
+    position: fixed; top: 0; left: 0;
+    pointer-events: none; z-index: 9999;
+    transform: translate(-50%, -50%);
+    will-change: transform;
+  }
+  .cursor-dot {
+    width: 6px; height: 6px;
+    background: var(--accent); border-radius: 50%;
+    transition: transform 0.1s ease;
+  }
+  .cursor-ring {
+    width: 36px; height: 36px;
+    border: 1.5px solid var(--ink); border-radius: 50%;
+    transition: width 0.25s ease, height 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+  }
+  .cursor-ring.hover {
+    width: 60px; height: 60px;
+    border-color: var(--accent);
+    background: rgba(184, 89, 64, 0.08);
+  }
+  .cursor-trail {
+    position: fixed; top: 0; left: 0;
+    pointer-events: none; z-index: 9998;
+    transform: translate(-50%, -50%);
+    width: 4px; height: 4px;
+    background: var(--accent); border-radius: 50%;
+    opacity: 0.4;
+  }
+
+  /* ========== NOISE OVERLAY ========== */
+  .noise-overlay {
+    position: fixed; inset: 0; z-index: 50;
+    pointer-events: none; mix-blend-mode: overlay;
+    opacity: 0.4; animation: noiseShift 0.5s steps(4) infinite;
+  }
+  @keyframes noiseShift {
+    0%   { transform: translate(0, 0); }
+    25%  { transform: translate(-2%, 1%); }
+    50%  { transform: translate(1%, -2%); }
+    75%  { transform: translate(-1%, 2%); }
+    100% { transform: translate(0, 0); }
+  }
+
+  .hero {
+    padding: 168px 64px 120px;
+    border-bottom: 1px solid var(--border);
+    position: relative; overflow: hidden;
+  }
+  .hero .meta {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--muted); letter-spacing: 0.08em;
+    text-transform: uppercase; margin-bottom: 32px;
+    display: flex; gap: 24px; align-items: center;
+  }
+  .hero .meta::before { content: ''; width: 32px; height: 1px; background: var(--ink); }
+  .hero h1 {
+    font-family: var(--serif); font-weight: 380;
+    font-size: clamp(56px, 9vw, 132px); line-height: 0.95;
+    letter-spacing: -0.035em; margin-bottom: 40px; max-width: 1100px;
+  }
+  .hero h1 em { font-style: italic; color: var(--accent); font-weight: 300; }
+  .hero .lede {
+    font-size: 18px; line-height: 1.5; color: var(--ink-soft);
+    max-width: 560px; margin-bottom: 56px;
+  }
+  .hero .scroll-cue {
+    display: inline-flex; align-items: center; gap: 12px;
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
+  }
+  .hero .scroll-cue .line {
+    width: 48px; height: 1px; background: var(--ink);
+    position: relative; overflow: hidden;
+  }
+  .hero .scroll-cue .line::after {
+    content: ''; position: absolute; top: 0; left: -100%;
+    width: 100%; height: 100%; background: var(--accent);
+    animation: scrollLine 2.4s ease-in-out infinite;
+  }
+  @keyframes scrollLine {
+    0% { left: -100%; } 50% { left: 100%; } 100% { left: 100%; }
+  }
+  section.chapter {
+    padding: 120px 64px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  section.chapter .chapter-head {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 64px; margin-bottom: 64px; align-items: start;
+  }
+  .chapter-num {
+    font-family: var(--serif);
+    font-size: clamp(120px, 14vw, 220px);
+    font-weight: 300; line-height: 0.85;
+    color: var(--bg-3); letter-spacing: -0.04em;
+    user-select: none; margin-top: -40px;
+  }
+  .chapter-meta { padding-top: 24px; }
+  .chapter-tag {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--accent); letter-spacing: 0.12em;
+    text-transform: uppercase; margin-bottom: 16px;
+  }
+  .chapter-title {
+    font-family: var(--serif); font-weight: 400;
+    font-size: clamp(40px, 5vw, 64px); line-height: 1.05;
+    letter-spacing: -0.025em; margin-bottom: 24px;
+  }
+  .chapter-desc {
+    font-size: 16px; color: var(--ink-soft);
+    max-width: 480px; line-height: 1.65;
+  }
+  .chapter-desc strong { font-weight: 500; color: var(--ink); }
+  .demo-frame {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: 4px; overflow: hidden; position: relative;
+  }
+  .demo-frame .demo-label {
+    position: absolute; top: 16px; left: 16px; z-index: 5;
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    background: rgba(244, 240, 232, 0.7);
+    backdrop-filter: blur(6px);
+    padding: 4px 8px; border-radius: 2px;
+  }
+  .demo-frame .demo-area { min-height: 480px; position: relative; overflow: hidden; }
+  .code-block {
+    background: #16140f; color: #d4cdb8;
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.65;
+    padding: 28px 32px; border-radius: 4px; margin-top: 32px;
+    overflow-x: auto; border: 1px solid rgba(255,255,255,0.08);
+  }
+  .code-block .kw { color: #c9a368; }
+  .code-block .fn { color: #b85940; }
+  .code-block .num { color: #8aab94; }
+  .code-block .cmt { color: #6a6558; font-style: italic; }
+  .code-block .str { color: #a8b88c; }
+
+  /* ========== ⑱ CUSTOM CURSOR DEMO ========== */
+  .cursor-demo {
+    height: 600px; background: var(--bg-2);
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    cursor: none;
+  }
+  .cursor-demo-content { text-align: center; padding: 32px; max-width: 560px; }
+  .cursor-demo-tag {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 16px;
+  }
+  .cursor-demo-title {
+    font-family: var(--serif); font-size: clamp(40px, 6vw, 72px);
+    font-weight: 380; letter-spacing: -0.02em; margin-bottom: 16px;
+  }
+  .cursor-demo-sub {
+    color: var(--ink-soft); font-size: 16px; margin-bottom: 32px;
+    line-height: 1.5;
+  }
+  .cursor-demo-cta {
+    display: inline-block; padding: 16px 36px;
+    background: var(--ink); color: var(--bg);
+    border-radius: 100px; font-weight: 500; font-size: 14px;
+    transition: transform 0.3s ease;
+  }
+  .cursor-demo-cta.hover-target {
+    /* a class to test hover */
+  }
+  .cursor-hint {
+    position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  /* ========== ⑲ HORIZONTAL SCROLL ========== */
+  .hscroll-wrapper {
+    height: 600px; background: var(--bg-2);
+    position: relative; overflow: hidden;
+  }
+  /* 触摸模式:不用 pin+scrub,改为原生横向滑动 + scroll-snap(移动端更流畅,符合 skill 自身的移动端建议) */
+  .hscroll-wrapper.touch {
+    overflow-x: auto; overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+  .hscroll-wrapper.touch .hscroll-track { width: auto; will-change: auto; }
+  .hscroll-wrapper.touch .hscroll-panel {
+    width: 86%; max-width: 480px; flex: 0 0 auto;
+    scroll-snap-align: center;
+  }
+  .hscroll-track {
+    display: flex; height: 100%;
+    width: 400%; /* 4 panels */
+    will-change: transform;
+  }
+  .hscroll-panel {
+    width: 25%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    padding: 64px;
+    position: relative;
+    border-right: 1px solid var(--border);
+  }
+  .hscroll-panel:last-child { border-right: none; }
+  .hscroll-num {
+    position: absolute; top: 32px; left: 32px;
+    font-family: var(--mono); font-size: 12px; color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+  .hscroll-card {
+    max-width: 420px;
+  }
+  .hscroll-tag {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--accent); letter-spacing: 0.12em;
+    text-transform: uppercase; margin-bottom: 16px;
+  }
+  .hscroll-title {
+    font-family: var(--serif); font-size: clamp(36px, 5vw, 56px);
+    font-weight: 380; letter-spacing: -0.02em; line-height: 1.05;
+    margin-bottom: 24px;
+  }
+  .hscroll-desc {
+    color: var(--ink-soft); font-size: 15px;
+    line-height: 1.65; margin-bottom: 32px;
+  }
+  .hscroll-visual {
+    width: 280px; height: 280px;
+    border-radius: 16px;
+    margin-bottom: 32px;
+    position: relative; overflow: hidden;
+  }
+  .hscroll-progress {
+    position: absolute; bottom: 32px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 8px; z-index: 10;
+  }
+  .hscroll-pip {
+    width: 24px; height: 3px;
+    background: var(--bg-3); border-radius: 2px;
+    transition: background 0.3s ease;
+  }
+  .hscroll-pip.active { background: var(--accent); }
+  .hscroll-hint {
+    position: absolute; top: 32px; right: 32px;
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+  .hscroll-hint .touch-only { display: none; }
+  .hscroll-hint.is-touch .mouse-only { display: none; }
+  .hscroll-hint.is-touch .touch-only { display: inline; }
+
+  /* ========== ⑳ NOISE TEXTURE ========== */
+  .noise-demo {
+    height: 600px; background: #1a1a1a;
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+  }
+  .noise-bg-gradient {
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at 30% 20%, rgba(184,89,64,0.5), transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(45,74,62,0.6), transparent 50%),
+                radial-gradient(circle at 50% 90%, rgba(201,163,104,0.3), transparent 50%);
+  }
+  .noise-canvas {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    opacity: 0.25;
+    mix-blend-mode: overlay;
+  }
+  .noise-content {
+    position: relative; z-index: 2; text-align: center;
+    padding: 48px; max-width: 600px;
+  }
+  .noise-tag {
+    font-family: var(--mono); font-size: 11px; color: var(--gold);
+    letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 16px;
+  }
+  .noise-title {
+    font-family: var(--serif); font-size: clamp(40px, 6vw, 72px);
+    font-weight: 380; letter-spacing: -0.02em; margin-bottom: 16px;
+  }
+  .noise-sub { color: rgba(255,255,255,0.7); line-height: 1.5; }
+  .noise-toggle {
+    position: absolute; top: 24px; right: 24px;
+    padding: 8px 16px; background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2); color: white;
+    border-radius: 100px; font-family: var(--mono); font-size: 11px;
+    cursor: pointer; z-index: 5; letter-spacing: 0.05em;
+  }
+  .noise-toggle:hover { background: rgba(255,255,255,0.2); }
+
+  /* ========== ㉑ GLITCH RGB ========== */
+  .glitch-demo {
+    height: 600px; background: var(--ink); color: white;
+    display: flex; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+  .glitch-content {
+    text-align: center; position: relative; z-index: 2;
+  }
+  .glitch-tag {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 24px;
+  }
+  .glitch-title {
+    font-family: var(--serif);
+    font-size: clamp(56px, 10vw, 132px);
+    font-weight: 380; letter-spacing: -0.035em;
+    line-height: 1; margin-bottom: 32px;
+    position: relative;
+    display: inline-block;
+  }
+  .glitch-title .layer {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: block;
+  }
+  .glitch-title .layer.red {
+    color: #ff3030;
+    mix-blend-mode: screen;
+    animation: glitchRed 3s infinite linear alternate-reverse;
+  }
+  .glitch-title .layer.blue {
+    color: #3030ff;
+    mix-blend-mode: screen;
+    animation: glitchBlue 2.7s infinite linear alternate-reverse;
+  }
+  .glitch-title .base { position: relative; }
+  @keyframes glitchRed {
+    0%, 90%, 100% { transform: translate(0, 0); }
+    92% { transform: translate(-3px, 1px); }
+    94% { transform: translate(2px, -1px); }
+    96% { transform: translate(-2px, 2px); }
+    98% { transform: translate(3px, 0); }
+  }
+  @keyframes glitchBlue {
+    0%, 88%, 100% { transform: translate(0, 0); }
+    90% { transform: translate(3px, -1px); }
+    93% { transform: translate(-2px, 1px); }
+    96% { transform: translate(2px, -2px); }
+  }
+  .glitch-sub {
+    color: rgba(255,255,255,0.6); max-width: 480px; margin: 0 auto 32px;
+    font-size: 15px; line-height: 1.6;
+  }
+  .glitch-controls {
+    display: flex; gap: 12px; justify-content: center;
+    margin-top: 24px;
+  }
+  .glitch-controls button {
+    padding: 10px 20px; background: transparent; color: white;
+    border: 1px solid rgba(255,255,255,0.3); border-radius: 100px;
+    font-family: var(--mono); font-size: 11px; cursor: pointer;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    transition: all 0.2s ease;
+  }
+  .glitch-controls button:hover {
+    background: white; color: var(--ink);
+  }
+
+  /* ========== ㉒ SCROLL-DRIVEN NUMBERS ========== */
+  .scrolldemo {
+    height: 600px; background: var(--bg-2);
+    position: relative; overflow: hidden;
+  }
+  .scroll-stick {
+    position: sticky; top: 0; height: 100vh;
+    height: 100dvh; /* 移动端地址栏收展时取动态视口 */
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+  }
+  .scroll-track {
+    height: 200vh; /* extra scroll room for numbers */
+  }
+  .scroll-content {
+    text-align: center;
+    width: 100%; max-width: 720px; padding: 32px;
+  }
+  .scroll-tag {
+    font-family: var(--mono); font-size: 11px; color: var(--accent);
+    letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 24px;
+  }
+  .scroll-number-row {
+    display: flex; align-items: baseline; justify-content: center;
+    gap: 12px; margin-bottom: 16px;
+  }
+  .scroll-number {
+    font-family: var(--serif); font-size: clamp(80px, 12vw, 160px);
+    font-weight: 300; letter-spacing: -0.04em; line-height: 0.9;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .scroll-unit {
+    font-family: var(--serif); font-size: clamp(24px, 3vw, 40px);
+    color: var(--accent); font-style: italic; font-weight: 300;
+  }
+  .scroll-label {
+    font-family: var(--mono); font-size: 12px; color: var(--muted);
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .scroll-bar {
+    width: 320px; max-width: 80%; height: 2px;
+    background: var(--bg-3); margin-top: 32px;
+    position: relative; border-radius: 1px; overflow: hidden;
+  }
+  .scroll-bar-fill {
+    position: absolute; top: 0; left: 0;
+    height: 100%; width: 0%;
+    background: var(--accent);
+    transition: width 0.05s linear;
+  }
+  .scroll-status {
+    position: absolute; top: 32px; right: 32px;
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+
+  /* ========== ㉓ COMMAND PALETTE ========== */
+  .cmdk-demo {
+    height: 600px; background: var(--bg-2);
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    padding: 32px;
+    background-image: radial-gradient(circle at 20% 30%, rgba(184,89,64,0.05), transparent 40%),
+                      radial-gradient(circle at 80% 70%, rgba(45,74,62,0.05), transparent 40%);
+  }
+  .cmdk-hint {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .cmdk-trigger {
+    display: inline-flex; align-items: center; gap: 12px;
+    padding: 16px 24px; background: var(--bg);
+    border: 1px solid var(--border-strong); border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(22,22,22,0.08);
+    cursor: pointer; min-width: 360px;
+    transition: transform 0.2s ease;
+  }
+  .cmdk-trigger:hover { transform: translateY(-2px); }
+  .cmdk-trigger .search-icon {
+    color: var(--muted); flex-shrink: 0;
+  }
+  .cmdk-trigger .placeholder {
+    flex: 1; color: var(--muted); font-size: 14px;
+  }
+  .cmdk-trigger .kbd {
+    display: inline-flex; gap: 4px; flex-shrink: 0;
+  }
+  .kbd {
+    font-family: var(--mono); font-size: 11px;
+    background: var(--bg-3); color: var(--ink-soft);
+    padding: 3px 8px; border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  .cmdk-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(22,22,22,0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: none; align-items: flex-start;
+    justify-content: center;
+    padding: min(12vh, 96px) 16px 16px; /* 左右留白,手机上面板不再贴边 */
+  }
+  .cmdk-overlay.open { display: flex; }
+  .cmdk-panel {
+    width: 100%; max-width: 640px;
+    background: var(--bg); border-radius: 12px;
+    border: 1px solid var(--border-strong);
+    box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+    overflow: hidden;
+    transform: scale(0.95) translateY(-10px);
+    opacity: 0;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .cmdk-overlay.open .cmdk-panel { transform: scale(1) translateY(0); opacity: 1; }
+  .cmdk-input-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .cmdk-input {
+    flex: 1; border: none; outline: none; background: transparent;
+    font-family: var(--sans); font-size: 16px;
+    color: var(--ink);
+  }
+  .cmdk-list {
+    max-height: 360px; overflow-y: auto;
+    padding: 8px;
+  }
+  .cmdk-group-label {
+    font-family: var(--mono); font-size: 10px;
+    color: var(--muted); letter-spacing: 0.1em;
+    text-transform: uppercase; padding: 12px 12px 6px;
+  }
+  .cmdk-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: 6px;
+    cursor: pointer; transition: background 0.1s ease;
+  }
+  .cmdk-item:hover, .cmdk-item.selected {
+    background: rgba(184,89,64,0.1);
+  }
+  .cmdk-item-icon {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg-3); border-radius: 6px;
+    font-size: 14px; flex-shrink: 0;
+  }
+  .cmdk-item-body { flex: 1; min-width: 0; }
+  .cmdk-item-title {
+    font-size: 14px; color: var(--ink);
+  }
+  .cmdk-item-title mark {
+    background: rgba(184,89,64,0.25);
+    color: var(--ink); border-radius: 2px; padding: 0 2px;
+  }
+  .cmdk-item-desc {
+    font-size: 12px; color: var(--muted); margin-top: 2px;
+  }
+  .cmdk-item-kbd {
+    display: flex; gap: 4px; flex-shrink: 0;
+  }
+  .cmdk-empty {
+    padding: 48px 24px; text-align: center;
+    color: var(--muted); font-size: 14px;
+  }
+  .cmdk-footer {
+    display: flex; justify-content: space-between;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-3);
+    font-family: var(--mono); font-size: 10px;
+    color: var(--muted); letter-spacing: 0.05em;
+  }
+
+  /* ========== ㉔ BLOB MORPH ========== */
+  .blob-demo {
+    height: 600px; background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+    color: white;
+    position: relative; overflow: hidden;
+  }
+  .blob-stage {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+  }
+  .blob-svg {
+    width: min(320px, 68vw);
+    height: auto;
+    filter: drop-shadow(0 20px 40px rgba(184,89,64,0.4));
+  }
+  .blob-shape {
+    fill: url(#blobGradient);
+  }
+  .blob-info {
+    position: absolute; bottom: 40px; left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+  }
+  .blob-name {
+    font-family: var(--serif); font-size: clamp(32px, 4vw, 48px);
+    font-weight: 380; letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+  .blob-keys {
+    display: flex; gap: 8px; justify-content: center;
+    flex-wrap: wrap; padding: 0 16px;
+  }
+  .blob-key {
+    padding: 8px 16px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 100px;
+    font-family: var(--mono); font-size: 11px;
+    color: rgba(255,255,255,0.7);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.05em;
+  }
+  .blob-key:hover {
+    background: rgba(184,89,64,0.3);
+    border-color: var(--accent);
+    color: white;
+  }
+  .blob-tag {
+    position: absolute; top: 32px; left: 32px;
+    font-family: var(--mono); font-size: 11px; color: var(--gold);
+    letter-spacing: 0.12em; text-transform: uppercase;
+  }
+  .blob-counter {
+    position: absolute; top: 32px; right: 32px;
+    font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,0.5);
+    letter-spacing: 0.08em;
+  }
+
+  footer {
+    padding: 120px 64px 80px;
+    background: var(--ink); color: var(--bg);
+  }
+  footer .grid {
+    display: grid; grid-template-columns: 2fr 1fr 1fr;
+    gap: 64px; margin-bottom: 80px;
+  }
+  footer h2 {
+    font-family: var(--serif); font-size: clamp(48px, 6vw, 96px);
+    font-weight: 380; line-height: 0.95; letter-spacing: -0.03em;
+  }
+  footer h2 em { color: var(--accent); font-style: italic; }
+  footer h4 {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--muted); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 16px;
+  }
+  footer ul { list-style: none; }
+  footer li {
+    font-size: 13px; color: var(--bg);
+    margin-bottom: 8px; opacity: 0.7;
+    transition: opacity 0.2s ease; cursor: pointer;
+  }
+  footer li:hover { opacity: 1; color: var(--accent); }
+  footer .credits {
+    border-top: 1px solid rgba(244,240,232,0.15);
+    padding-top: 32px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+  @media (max-width: 900px) {
+    header.topnav { padding: 0 20px; }
+    header.topnav .brand { margin-right: 24px; font-size: 15px; }
+    .hero, section.chapter, footer { padding-left: 24px; padding-right: 24px; }
+    .hero { padding-top: 120px; padding-bottom: 80px; }
+    section.chapter { padding-top: 80px; padding-bottom: 80px; }
+    section.chapter .chapter-head { grid-template-columns: 1fr; gap: 24px; margin-bottom: 40px; }
+    .chapter-num { font-size: 80px; margin-top: 0; }
+    footer .grid { grid-template-columns: 1fr; gap: 40px; }
+    .cmdk-trigger { min-width: 0; width: 100%; }
+    .cursor-dot, .cursor-ring, .cursor-trail { display: none; }
+    .hscroll-panel { padding: 32px; }
+  }
+  /* 手机横屏 / 短视口:压缩 demo 高度 */
+  @media (max-height: 700px) {
+    .cursor-demo, .hscroll-wrapper, .noise-demo, .glitch-demo,
+    .scrolldemo, .cmdk-demo, .blob-demo { height: min(600px, 88vh); }
+    .cmdk-overlay { padding-top: min(8vh, 48px); }
+  }
+</style>
+</head>
+<body>
+
+<header class="topnav">
+  <div class="brand">Vol. 03 · <em>Frontier</em></div>
+  <nav>
+    <a href="#ch18"><span>18</span>Cursor</a>
+    <a href="#ch19"><span>19</span>H-Scroll</a>
+    <a href="#ch20"><span>20</span>Noise</a>
+    <a href="#ch21"><span>21</span>Glitch</a>
+    <a href="#ch22"><span>22</span>Scroll#</a>
+    <a href="#ch23"><span>23</span>Cmd+K</a>
+    <a href="#ch24"><span>24</span>Blob</a>
+  </nav>
+</header>
+
+<!-- SVG noise filter for chapter 20 -->
+<svg width="0" height="0" style="position:absolute">
+  <filter id="noiseFilter">
+    <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/>
+    <feColorMatrix type="saturate" values="0"/>
+  </filter>
+</svg>
+
+<!-- SVG gradient for chapter 24 blob -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="blobGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#b85940"/>
+      <stop offset="50%" stop-color="#c9a368"/>
+      <stop offset="100%" stop-color="#2d4a3e"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<section class="hero">
+  <div class="meta">
+    <span>Vol. 03 · The Frontier</span>
+    <span>·</span>
+    <span>7 Patterns · 2025</span>
+  </div>
+  <h1>The <em>Frontier.</em><br>7 Cutting Edge.</h1>
+  <p class="lede">第三辑 —— 7 个当下最顶级产品正在使用的交互。从自定义光标到 SVG 形变，每一种都在重新定义「高级感」的视觉语言。</p>
+  <div class="scroll-cue" onclick="document.getElementById('ch18').scrollIntoView({behavior:'smooth'})">
+    <span class="line"></span>
+    <span>Continue · 继续</span>
+  </div>
+</section>
+
+<!-- ========== CHAPTER 18: CUSTOM CURSOR ========== -->
+<section class="chapter" id="ch18">
+  <div class="chapter-head">
+    <div class="chapter-num">18</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Pointer · 个性化</div>
+      <h2 class="chapter-title">自定义光标</h2>
+      <p class="chapter-desc">隐藏原生光标，绘制<strong>双层光标</strong>：内点立即跟随，外圈带阻尼惯性。悬停可交互元素时<strong>外圈放大、变色</strong>，常用于 Linear / Vercel / Stripe 等高端产品页。</p>
+    </div>
+  </div>
+  <div class="demo-frame">
+    <div class="demo-label">demo · move cursor</div>
+    <div class="demo-area cursor-demo" id="cursorDemo">
+      <div class="cursor-demo-content">
+        <div class="cursor-demo-tag">Premium Cursor</div>
+        <h2 class="cursor-demo-title">Touch. Feel.</h2>
+        <p class="cursor-demo-sub">当鼠标移过可交互元素时光标会变形 —— 让交互的「起点」本身就是视觉语言的一部分。</p>
+        <a class="cursor-demo-cta hover-target">Hover me</a>
+      </div>
+      <div class="cursor-hint">
+        <span class="mouse-only">↳ 双层光标 · 惯性延迟 · 悬停放大</span>
+        <span class="touch-only">↳ 触摸设备自动禁用自定义光标,恢复原生体验</span>
+      </div>
+    </div>
+  </div>
+  <pre class="code-block"><span class="cmt">// 核心：双层光标 + requestAnimationFrame 惯性跟随</span>
+<span class="kw">const</span> dot = document.querySelector(<span class="str">'.cursor-dot'</span>);
+<span class="kw">const</span> ring = document.querySelector(<span class="str">'.cursor-ring'</span>);
+<span class="kw">let</span> mx = <span class="num">0</span>, my = <span class="num">0</span>, rx = <span class="num">0</span>, ry = <span class="num">0</span>;
+
+<span class="fn">document</span>.addEventListener(<span class="str">'mousemove'</span>, (e) =&gt; {
+  mx = e.clientX; my = e.clientY;
+  dot.style.transform = <span class="str">`translate(${mx}px, ${my}px) translate(-50%,-50%)`</span>;
+});
+
+(<span class="kw">function</span> <span class="fn">tick</span>() {
+  rx += (mx - rx) * <span class="num">0.18</span>;        <span class="cmt">// 阻尼</span>
+  ry += (my - ry) * <span class="num">0.18</span>;
+  ring.style.transform = <span class="str">`translate(${rx}px, ${ry}px) translate(-50%,-50%)`</span>;
+  requestAnimationFrame(tick);
+})();
+
+<span class="cmt">// 悬停放大</span>
+<span class="fn">document</span>.querySelectorAll(<span class="str">'.hover-target'</span>).forEach(el =&gt; {
+  el.addEventListener(<span class="str">'mouseenter'</span>, () =&gt; ring.classList.add(<span class="str">'hover'</span>));
+  el.addEventListener(<span class="str">'mouseleave'</span>, () =&gt; ring.classList.remove(<span class="str">'hover'</span>));
+});
+</pre>
+</section>
+
+<!-- ========== CHAPTER 19: HORIZONTAL SCROLL ========== -->
+<section class="chapter" id="ch19">
+  <div class="chapter-head">
+    <div class="chapter-num">19</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Layout · 叙事</div>
+      <h2 class="chapter-title">水平滚动叙事</h2>
+      <p class="chapter-desc">把<strong>垂直滚动转换成水平平移</strong>。用户向下滚，但内容横向移动 —— Apple 产品页的招牌手法。用 <code>ScrollTrigger</code> 锁定滚动区间，按 <code>scrollY</code> 比例移动横向轨道。</p>
+    </div>
+  </div>
+  <div class="demo-frame">
+    <div class="demo-label">demo · scroll down</div>
+    <div class="demo-area hscroll-wrapper" id="hscrollWrapper">
+      <div class="hscroll-track" id="hscrollTrack">
+        <div class="hscroll-panel" data-i="0">
+          <div class="hscroll-num">01 / 04</div>
+          <div class="hscroll-card">
+            <div class="hscroll-visual" style="background: linear-gradient(135deg, #b85940, #c9a368);"></div>
+            <div class="hscroll-tag">Overview</div>
+            <h3 class="hscroll-title">Built for the next decade.</h3>
+            <p class="hscroll-desc">A fundamentally new architecture that brings quantum-level efficiency to every workload.</p>
+          </div>
+        </div>
+        <div class="hscroll-panel" data-i="1">
+          <div class="hscroll-num">02 / 04</div>
+          <div class="hscroll-card">
+            <div class="hscroll-visual" style="background: linear-gradient(135deg, #2d4a3e, #c9a368);"></div>
+            <div class="hscroll-tag">Performance</div>
+            <h3 class="hscroll-title">3x faster than before.</h3>
+            <p class="hscroll-desc">Every core redesigned. Every transistor optimized. The result is performance that feels effortless.</p>
+          </div>
+        </div>
+        <div class="hscroll-panel" data-i="2">
+          <div class="hscroll-num">03 / 04</div>
+          <div class="hscroll-card">
+            <div class="hscroll-visual" style="background: linear-gradient(135deg, #6b5b95, #4ecdc4);"></div>
+            <div class="hscroll-tag">Design</div>
+            <h3 class="hscroll-title">Crafted to be touched.</h3>
+            <p class="hscroll-desc">Aerospace-grade titanium. Sub-gram precision. A surface so smooth it disappears in your hand.</p>
+          </div>
+        </div>
+        <div class="hscroll-panel" data-i="3">
+          <div class="hscroll-num">04 / 04</div>
+          <div class="hscroll-card">
+            <div class="hscroll-visual" style="background: linear-gradient(135deg, #ffd93d, #ff6b6b);"></div>
+            <div class="hscroll-tag">Sustainability</div>
+            <h3 class="hscroll-title">Better for the planet.</h3>
+            <p class="hscroll-desc">100% recycled aluminum enclosure. Carbon-neutral manufacturing. Designed to last a lifetime.</p>
+          </div>
+        </div>
+      </div>
+      <div class="hscroll-progress" id="hscrollProgress">
+        <div class="hscroll-pip active"></div>
+        <div class="hscroll-pip"></div>
+        <div class="hscroll-pip"></div>
+        <div class="hscroll-pip"></div>
+      </div>
+      <div class="hscroll-hint">
+        <span class="mouse-only">↓ scroll · 滚动驱动横向</span>
+        <span class="touch-only">← swipe · 横向滑动 →</span>
+      </div>
+    </div>
+  </div>
+  <pre class="code-block"><span class="cmt">// 核心：把垂直滚动量映射到水平 translateX</span>
+gsap.<span class="fn">to</span>(track, {
+  x: () =&gt; -(track.scrollWidth - window.innerWidth),
+  ease: <span class="str">"none"</span>,
+  scrollTrigger: {
+    trigger: wrapper,
+    start: <span class="str">"top top"</span>,
+    end: () =&gt; <span class="str">`+=${track.scrollWidth - window.innerWidth}`</span>,
+    pin: <span class="kw">true</span>,              <span class="cmt">// 钉住 wrapper</span>
+    scrub: <span class="num">1</span>,                 <span class="cmt">// 1s 平滑</span>
+    invalidateOnRefresh: <span class="kw">true</span>
+  }
+});
+</pre>
+</section>
+
+<!-- ========== CHAPTER 20: NOISE TEXTURE ========== -->
+<section class="chapter" id="ch20">
+  <div class="chapter-head">
+    <div class="chapter-num">20</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Texture · 质感</div>
+      <h2 class="chapter-title">噪点纹理</h2>
+      <p class="chapter-desc">在背景上叠加一层<strong>细密噪点</strong>，瞬间让平面背景产生「印刷品 / 胶片」质感。SVG <code>feTurbulence</code> 生成噪声 + 短间隔 <code>steps()</code> 抖动 = "expensive" 视觉的秘诀。</p>
+    </div>
+  </div>
+  <div class="demo-frame">
+    <div class="demo-label">demo · animated grain</div>
+    <div class="demo-area noise-demo">
+      <div class="noise-bg-gradient"></div>
+      <canvas class="noise-canvas" id="noiseCanvas"></canvas>
+      <div class="noise-content">
+        <div class="noise-tag">Animated Noise</div>
+        <h2 class="noise-title">Premium Grain.</h2>
+        <p class="noise-sub">每一帧重新生成噪点图案 —— 让深色背景瞬间告别「塑料感」。</p>
+      </div>
+      <button class="noise-toggle" id="noiseToggle">Pause</button>
+    </div>
+  </div>
+  <pre class="code-block"><span class="cmt">// 核心：feTurbulence 噪声 + 每帧重绘</span>
+<span class="kw">function</span> <span class="fn">renderNoise</span>() {
+  <span class="kw">const</span> ctx = canvas.getContext(<span class="str">'2d'</span>);
+  <span class="kw">const</span> img = ctx.createImageData(w, h);
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i &lt; img.data.length; i += <span class="num">4</span>) {
+    <span class="kw">const</span> v = Math.random() * <span class="num">255</span>;
+    img.data[i] = img.data[i+<span class="num">1</span>] = img.data[i+<span class="num">2</span>] = v;
+    img.data[i+<span class="num">3</span>] = <span class="num">255</span>;
+  }
+  ctx.putImageData(img, <span class="num">0</span>, <span class="num">0</span>);
+  requestAnimationFrame(renderNoise);
+}
+</pre>
+</section>
+
+<!-- ========== CHAPTER 21: GLITCH RGB ========== -->
+<section class="chapter" id="ch21">
+  <div class="chapter-head">
+    <div class="chapter-num">21</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Identity · 故障感</div>
+      <h2 class="chapter-title">RGB 分离 Glitch</h2>
+      <p class="chapter-desc">同一个文字绘制 3 层（R/G/B），用 <code>mix-blend-mode: screen</code> 叠加；<strong>只在少数帧抖动位置</strong>（90%~98% 区间），创造「信号失稳」的高端视觉。Linear / Vercel 落地页标志手法。</p>
+    </div>
+  </div>
+  <div class="demo-frame">
+    <div class="demo-label">demo · click to trigger</div>
+    <div class="demo-area glitch-demo">
+      <div class="glitch-content">
+        <div class="glitch-tag">RGB Split</div>
+        <h2 class="glitch-title" id="glitchTitle">
+          <span class="layer red" aria-hidden="true">FRACTURED.</span>
+          <span class="layer blue" aria-hidden="true">FRACTURED.</span>
+          <span class="base">FRACTURED.</span>
+        </h2>
+        <p class="glitch-sub">极偶尔的偏移 + screen 混合模式 —— 让标题拥有「未完成 / 故障」的视觉张力。</p>
+      </div>
+    </div>
+  </div>
+  <pre class="code-block"><span class="cmt">// 核心：3 层文字 + screen 混合 + 关键帧微抖动</span>
+<span class="kw">&lt;h2&gt;</span>
+  <span class="kw">&lt;span class=</span><span class="str">"layer red"</span><span class="kw">&gt;</span>FRACTURED.<span class="kw">&lt;/span&gt;</span>
+  <span class="kw">&lt;span class=</span><span class="str">"layer blue"</span><span class="kw">&gt;</span>FRACTURED.<span class="kw">&lt;/span&gt;</span>
+  <span class="kw">&lt;span class=</span><span class="str">"base"</span><span class="kw">&gt;</span>FRACTURED.<span class="kw">&lt;/span&gt;</span>
+<span class="kw">&lt;/h2&gt;</span>
+
+.layer.red, .layer.blue {
+  position: absolute; inset: <span class="num">0</span>;
+  mix-blend-mode: screen;
+}
+.layer.red { color: <span class="num">#ff3030</span>; animation: glitchRed <span class="num">3</span>s infinite linear; }
+.layer.blue { color: <span class="num">#3030ff</span>; animation: glitchBlue <span class="num">2.7</span>s infinite linear; }
+
+<span class="fn">@keyframes</span> glitchRed {
+  <span class="num">0%</span>, <span class="num">90%</span>, <span class="num">100%</span> { transform: translate(<span class="num">0</span>, <span class="num">0</span>); }
+  <span class="num">92%</span> { transform: translate(-<span class="num">3px</span>, <span class="num">1px</span>); }
+  <span class="num">94%</span> { transform: translate(<span class="num">2px</span>, -<span class="num">1px</span>); }
+}
+</pre>
+</section>
+
+<!-- ========== CHAPTER 22: SCROLL-DRIVEN NUMBERS ========== -->
+<section class="chapter" id="ch22">
+  <div class="chapter-head">
+    <div class="chapter-num">22</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Data · 滚动叙事</div>
+      <h2 class="chapter-title">滚动驱动数字</h2>
+      <p class="chapter-desc">把<strong>滚动进度 0~1 映射到数字 0~N</strong>，数字随用户滚动「滚出来」。Apple 产品页典型手法：用 ScrollTrigger 监听 progress → 平滑 lerp → tabular-nums 数字无跳动。</p>
+    </div>
+  </div>
+  <div class="demo-frame">
+    <div class="demo-label">demo · scroll the panel</div>
+    <div class="demo-area scrolldemo" id="scrollDemo">
+      <div class="scroll-track" id="scrollTrack">
+        <div class="scroll-stick">
+          <div class="scroll-status" id="scrollStatus">0%</div>
+          <div class="scroll-content">
+            <div class="scroll-tag">Frame Rate</div>
+            <div class="scroll-number-row">
+              <div class="scroll-number" id="scrollNumber">0</div>
+              <div class="scroll-unit">fps</div>
+            </div>
+            <div class="scroll-label">smooth as butter · scroll to reveal</div>
+            <div class="scroll-bar">
+              <div class="scroll-bar-fill" id="scrollBar"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <pre class="code-block"><span class="cmt">// 核心：ScrollTrigger.progress → 平滑数字</span>
+<span class="kw">const</span> numEl = document.getElementById(<span class="str">'scrollNumber'</span>);
+ScrollTrigger.create({
+  trigger: track,
+  start: <span class="str">"top top"</span>,
+  end: <span class="str">"bottom bottom"</span>,
+  onUpdate: (self) =&gt; {
+    <span class="kw">const</span> target = Math.round(self.progress * <span class="num">240</span>);
+    current += (target - current) * <span class="num">0.1</span>;     <span class="cmt">// 平滑</span>
+    numEl.textContent = Math.round(current);
+    bar.style.width = (self.progress * <span class="num">100</span>) + <span class="str">'%'</span>;
+  }
+});
+</pre>
+</section>
+
+<!-- ========== CHAPTER 23: COMMAND PALETTE ========== -->
+<section class="chapter" id="ch23">
+  <div class="chapter-head">
+    <div class="chapter-num">23</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Power User · 快捷</div>
+      <h2 class="chapter-title">命令栏 Cmd+K</h2>
+      <p class="chapter-desc"><code>Cmd/Ctrl + K</code> 唤起<strong>模糊搜索命令面板</strong>。特性：键盘导航（↑↓ Enter Esc）、关键词高亮、分类分组、空状态。Linear / GitHub / Vercel / Raycast 都用这一模式。</p>
+    </div>
+  </div>
+  <div class="demo-frame">
+    <div class="demo-label">demo · press Cmd/Ctrl + K</div>
+    <div class="demo-area cmdk-demo">
+      <div class="cmdk-hint">↳ press Cmd+K or click below</div>
+      <div class="cmdk-trigger" id="cmdkTrigger" role="button" tabindex="0" aria-label="打开命令面板">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <div class="placeholder">Search commands, files, actions…</div>
+        <div class="kbd">
+          <span class="kbd">⌘</span><span class="kbd">K</span>
+        </div>
+      </div>
+    </div>
+    <div class="cmdk-overlay" id="cmdkOverlay">
+      <div class="cmdk-panel">
+        <div class="cmdk-input-row">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--muted)"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="cmdk-input" id="cmdkInput" type="text" placeholder="Type a command or search…" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="cmdk-list" id="cmdkList"></div>
+        <div class="cmdk-footer">
+          <div><span class="kbd">↑↓</span> navigate</div>
+          <div><span class="kbd">↵</span> select</div>
+          <div><span class="kbd">esc</span> close</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <pre class="code-block"><span class="cmt">// 核心：全局快捷键 + 模糊匹配 + 键盘导航</span>
+<span class="fn">document</span>.addEventListener(<span class="str">'keydown'</span>, (e) =&gt; {
+  <span class="kw">if</span> ((e.metaKey || e.ctrlKey) &amp;&amp; e.key === <span class="str">'k'</span>) {
+    e.preventDefault();
+    overlay.classList.toggle(<span class="str">'open'</span>);
+    input.focus();
+  }
+  <span class="kw">if</span> (e.key === <span class="str">'Escape'</span>) overlay.classList.remove(<span class="str">'open'</span>);
+});
+
+<span class="cmt">// 模糊匹配：高亮 query 在 title 中的字符</span>
+<span class="kw">function</span> <span class="fn">highlight</span>(text, q) {
+  <span class="kw">const</span> re = <span class="kw">new</span> <span class="fn">RegExp</span>(<span class="str">`(${q})`</span>, <span class="str">'gi'</span>);
+  <span class="kw">return</span> text.<span class="fn">replace</span>(re, <span class="str">'&lt;mark&gt;$1&lt;/mark&gt;'</span>);
+}
+</pre>
+</section>
+
+<!-- ========== CHAPTER 24: BLOB MORPH ========== -->
+<section class="chapter" id="ch24">
+  <div class="chapter-head">
+    <div class="chapter-num">24</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Visual · 液态</div>
+      <h2 class="chapter-title">Blob Morph 液态形变</h2>
+      <p class="chapter-desc">SVG <code>&lt;path&gt;</code> 的 <code>d</code> 属性在多组形状间<strong>平滑插值</strong>，配合渐变填充产生「液态金属」质感。Stripe 落地页的招牌元素。本质：相同点数的两个 path，GSAP 自动 morph。</p>
+    </div>
+  </div>
+  <div class="demo-frame">
+    <div class="demo-label">demo · click shape keys</div>
+    <div class="demo-area blob-demo">
+      <div class="blob-tag">SVG Path Morph</div>
+      <div class="blob-counter" id="blobCounter">01 / 06</div>
+      <div class="blob-stage">
+        <svg class="blob-svg" viewBox="0 0 200 200">
+          <path class="blob-shape" id="blobShape" d="M100,20 C140,20 180,60 180,100 C180,140 140,180 100,180 C60,180 20,140 20,100 C20,60 60,20 100,20 Z"/>
+        </svg>
+      </div>
+      <div class="blob-info">
+        <div class="blob-name" id="blobName">Circle</div>
+        <div class="blob-keys">
+          <button class="blob-key" data-shape="0">01 · Circle</button>
+          <button class="blob-key" data-shape="1">02 · Flower</button>
+          <button class="blob-key" data-shape="2">03 · Star</button>
+          <button class="blob-key" data-shape="3">04 · Drop</button>
+          <button class="blob-key" data-shape="4">05 · Wave</button>
+          <button class="blob-key" data-shape="5">06 · Cross</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <pre class="code-block"><span class="cmt">// 核心：6 个同点数 SVG path，GSAP morph 在它们之间过渡</span>
+<span class="kw">const</span> paths = [
+  <span class="str">"M100,20 C140,20 180,60 180,100 ..."</span>,   <span class="cmt">// circle</span>
+  <span class="str">"M100,30 C160,40 170,90 160,100 ..."</span>,   <span class="cmt">// flower</span>
+  <span class="str">"M100,20 C140,40 160,60 160,100 ..."</span>,   <span class="cmt">// star</span>
+  ...
+];
+gsap.to(shape, {
+  attr: { d: paths[i] },
+  duration: <span class="num">1.4</span>,
+  ease: <span class="str">"elastic.out(1, 0.6)"</span>            <span class="cmt">// 弹性</span>
+});
+</pre>
+</section>
+
+<footer>
+  <div class="grid">
+    <div>
+      <h2>Stay at the <em>edge.</em></h2>
+      <p style="opacity: 0.7; max-width: 480px; margin-top: 24px;">第三辑的 7 种模式都是当下顶级产品正在使用的语言 —— 但请记住，技术服务于目的。每一个「高级」都应该让用户感到更舒适、更高效、更愉悦，而不是更炫技。</p>
+    </div>
+    <div>
+      <h4>Skill</h4>
+      <ul>
+        <li>17 patterns</li>
+        <li>v1 · v2 · v3</li>
+        <li>SKILL.md · INDEX</li>
+        <li>PATTERNS.md</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Vol. 03 Patterns</h4>
+      <ul>
+        <li>⑱ Custom Cursor</li>
+        <li>⑲ H-Scroll</li>
+        <li>⑳ Noise</li>
+        <li>㉑ Glitch</li>
+        <li>㉒ Scroll #</li>
+        <li>㉓ Cmd+K</li>
+        <li>㉔ Blob Morph</li>
+      </ul>
+    </div>
+  </div>
+  <div class="credits">
+    <span>Vol. 03 · The Frontier · 2025</span>
+    <span>ui-interaction-skill</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  'use strict';
+
+  // ============ ⑱ CUSTOM CURSOR ============
+  // 仅在「有真实鼠标」的设备启用;触摸/触摸笔设备上光标定位没有意义,直接跳过
+  const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+
+  if (finePointer.matches) {
+    const dot = document.createElement('div');
+    dot.className = 'cursor-dot';
+    const ring = document.createElement('div');
+    ring.className = 'cursor-ring';
+    document.body.appendChild(dot);
+    document.body.appendChild(ring);
+
+    let mx = window.innerWidth / 2, my = window.innerHeight / 2;
+    let rx = mx, ry = my;
+
+    document.addEventListener('mousemove', (e) => {
+      mx = e.clientX; my = e.clientY;
+      dot.style.transform = `translate(${mx}px, ${my}px) translate(-50%,-50%)`;
+    }, { passive: true });
+
+    (function tick(){
+      rx += (mx - rx) * 0.18;
+      ry += (my - ry) * 0.18;
+      ring.style.transform = `translate(${rx}px, ${ry}px) translate(-50%,-50%)`;
+      requestAnimationFrame(tick);
+    })();
+
+    document.querySelectorAll('.hover-target, .cmdk-trigger, .blob-key, button, a').forEach(el => {
+      el.addEventListener('mouseenter', () => ring.classList.add('hover'));
+      el.addEventListener('mouseleave', () => ring.classList.remove('hover'));
+    });
+  }
+
+  // ============ ⑲ HORIZONTAL SCROLL ============
+  const wrapper = document.getElementById('hscrollWrapper');
+  const track = document.getElementById('hscrollTrack');
+  const pips = document.querySelectorAll('.hscroll-pip');
+  // 触摸设备(手机/平板,含宽屏平板):pin+scrub 在触摸滚动上易卡顿,
+  // 改为原生横向滑动 + scroll-snap,进度点随滑动更新
+  const coarsePointer = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+
+  if (wrapper && track) {
+    if (coarsePointer) {
+      wrapper.classList.add('touch');
+      // 进度点与提示原是滚动容器的子元素,移到外层 demo-frame 避免跟着滚走
+      const frame = wrapper.closest('.demo-frame');
+      if (frame) {
+        frame.appendChild(document.getElementById('hscrollProgress'));
+        const hint = wrapper.querySelector('.hscroll-hint');
+        if (hint) { hint.classList.add('is-touch'); frame.appendChild(hint); }
+      }
+      wrapper.addEventListener('scroll', () => {
+        const max = wrapper.scrollWidth - wrapper.clientWidth;
+        const idx = max > 0 ? Math.min(3, Math.round(wrapper.scrollLeft / max * 3)) : 0;
+        pips.forEach((p, i) => p.classList.toggle('active', i === idx));
+      }, { passive: true });
+    } else {
+      gsap.to(track, {
+        x: () => -(track.scrollWidth - wrapper.clientWidth),
+        ease: 'none',
+        scrollTrigger: {
+          trigger: wrapper,
+          start: 'top top',
+          end: () => `+=${track.scrollWidth - wrapper.clientWidth + 100}`,
+          pin: true,
+          scrub: 1,
+          invalidateOnRefresh: true,
+          onUpdate: (self) => {
+            const idx = Math.min(3, Math.floor(self.progress * 4));
+            pips.forEach((p, i) => p.classList.toggle('active', i === idx));
+          }
+        }
+      });
+    }
+  }
+
+  // ============ ⑳ NOISE TEXTURE ============
+  const noiseCanvas = document.getElementById('noiseCanvas');
+  const noiseToggle = document.getElementById('noiseToggle');
+  let noiseUserOn = true;   // 用户开关
+  let noiseInView = true;   // 是否在视口内(离屏自动暂停,移动端省电)
+  let noiseRaf;
+
+  function setupNoise() {
+    const demo = noiseCanvas.closest('.noise-demo');
+    if (!demo) return;
+    const rect = demo.getBoundingClientRect();
+    noiseCanvas.width = Math.floor(rect.width * 0.5);
+    noiseCanvas.height = Math.floor(rect.height * 0.5);
+  }
+
+  function noiseFrame() {
+    if (!(noiseUserOn && noiseInView)) return;
+    const ctx = noiseCanvas.getContext('2d');
+    const w = noiseCanvas.width, h = noiseCanvas.height;
+    const img = ctx.createImageData(w, h);
+    const data = img.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const v = (Math.random() * 255) | 0;
+      data[i] = data[i+1] = data[i+2] = v;
+      data[i+3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    noiseRaf = requestAnimationFrame(noiseFrame);
+  }
+
+  function startNoise() {
+    cancelAnimationFrame(noiseRaf);
+    noiseRaf = requestAnimationFrame(noiseFrame);
+  }
+
+  setupNoise();
+  startNoise();
+  window.addEventListener('resize', setupNoise);
+  noiseToggle.addEventListener('click', () => {
+    noiseUserOn = !noiseUserOn;
+    noiseToggle.textContent = noiseUserOn ? 'Pause' : 'Play';
+    if (noiseUserOn) startNoise();
+    else cancelAnimationFrame(noiseRaf);
+  });
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver((entries) => {
+      entries.forEach(en => {
+        noiseInView = en.isIntersecting;
+        if (noiseInView && noiseUserOn) startNoise();
+      });
+    }, { threshold: 0 }).observe(noiseCanvas.parentElement);
+  }
+
+  // ============ ㉒ SCROLL-DRIVEN NUMBERS ============
+  const scrollDemo = document.getElementById('scrollDemo');
+  const scrollTrack = document.getElementById('scrollTrack');
+  const numEl = document.getElementById('scrollNumber');
+  const bar = document.getElementById('scrollBar');
+  const status = document.getElementById('scrollStatus');
+  let currentNum = 0;
+
+  if (scrollTrack && numEl) {
+    ScrollTrigger.create({
+      trigger: scrollTrack,
+      start: 'top top',
+      end: 'bottom bottom',
+      onUpdate: (self) => {
+        const target = Math.round(self.progress * 240);
+        currentNum += (target - currentNum) * 0.15;
+        numEl.textContent = Math.round(currentNum);
+        bar.style.width = (self.progress * 100) + '%';
+        status.textContent = Math.round(self.progress * 100) + '%';
+      }
+    });
+  }
+
+  // ============ ㉓ COMMAND PALETTE ============
+  const cmdkOverlay = document.getElementById('cmdkOverlay');
+  const cmdkTrigger = document.getElementById('cmdkTrigger');
+  const cmdkInput = document.getElementById('cmdkInput');
+  const cmdkList = document.getElementById('cmdkList');
+
+  const commands = [
+    { group: 'Navigation', icon: '◐', title: 'Go to Dashboard', desc: 'Jump to home overview', kbd: 'G D' },
+    { group: 'Navigation', icon: '◆', title: 'Go to Settings', desc: 'Account preferences', kbd: 'G S' },
+    { group: 'Navigation', icon: '◇', title: 'Go to Profile', desc: 'Your personal page', kbd: 'G P' },
+    { group: 'Actions', icon: '✎', title: 'New Document', desc: 'Create a fresh document', kbd: 'N' },
+    { group: 'Actions', icon: '⊕', title: 'Add Member', desc: 'Invite a teammate', kbd: 'A M' },
+    { group: 'Actions', icon: '⊞', title: 'Toggle Theme', desc: 'Switch light / dark', kbd: 'T' },
+    { group: 'Tools', icon: '⚙', title: 'Command Line', desc: 'Open integrated terminal', kbd: '` ' },
+    { group: 'Tools', icon: '⌕', title: 'Search Files', desc: 'Fuzzy file search', kbd: 'P' },
+    { group: 'Help', icon: '?', title: 'Show Shortcuts', desc: 'View all keyboard shortcuts', kbd: '?' },
+    { group: 'Help', icon: '✉', title: 'Send Feedback', desc: 'Tell us what you think', kbd: '' }
+  ];
+
+  function highlight(text, q) {
+    if (!q) return text;
+    const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    return text.replace(re, '<mark>$1</mark>');
+  }
+
+  function fuzzyMatch(text, q) {
+    if (!q) return true;
+    const t = text.toLowerCase();
+    const query = q.toLowerCase();
+    let qi = 0;
+    for (let i = 0; i < t.length && qi < query.length; i++) {
+      if (t[i] === query[qi]) qi++;
+    }
+    return qi === query.length;
+  }
+
+  let selectedIdx = 0;
+
+  function renderCommands() {
+    const q = cmdkInput.value.trim();
+    const filtered = commands.filter(c =>
+      fuzzyMatch(c.title, q) || fuzzyMatch(c.desc, q) || fuzzyMatch(c.group, q)
+    );
+
+    if (filtered.length === 0) {
+      cmdkList.innerHTML = '<div class="cmdk-empty">No results found · 没有匹配的结果</div>';
+      selectedIdx = 0;
+      return;
+    }
+
+    let html = '';
+    let lastGroup = '';
+    filtered.forEach((c, i) => {
+      if (c.group !== lastGroup) {
+        html += `<div class="cmdk-group-label">${c.group}</div>`;
+        lastGroup = c.group;
+      }
+      html += `<div class="cmdk-item ${i === selectedIdx ? 'selected' : ''}" data-idx="${i}">
+        <div class="cmdk-item-icon">${c.icon}</div>
+        <div class="cmdk-item-body">
+          <div class="cmdk-item-title">${highlight(c.title, q)}</div>
+          <div class="cmdk-item-desc">${highlight(c.desc, q)}</div>
+        </div>
+        ${c.kbd ? `<div class="cmdk-item-kbd"><span class="kbd">${c.kbd}</span></div>` : ''}
+      </div>`;
+    });
+    cmdkList.innerHTML = html;
+
+    // scroll into view
+    const sel = cmdkList.querySelector('.cmdk-item.selected');
+    if (sel) sel.scrollIntoView({ block: 'nearest' });
+  }
+
+  function openCmdK() {
+    cmdkOverlay.classList.add('open');
+    cmdkInput.value = '';
+    selectedIdx = 0;
+    renderCommands();
+    setTimeout(() => cmdkInput.focus(), 50);
+  }
+
+  function closeCmdK() {
+    cmdkOverlay.classList.remove('open');
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      if (cmdkOverlay.classList.contains('open')) closeCmdK();
+      else openCmdK();
+    }
+    if (e.key === 'Escape' && cmdkOverlay.classList.contains('open')) {
+      closeCmdK();
+    }
+    if (!cmdkOverlay.classList.contains('open')) return;
+
+    const items = cmdkList.querySelectorAll('.cmdk-item');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedIdx = Math.min(items.length - 1, selectedIdx + 1);
+      renderCommands();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedIdx = Math.max(0, selectedIdx - 1);
+      renderCommands();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const item = cmdkList.querySelector('.cmdk-item.selected');
+      if (item) {
+        const title = item.querySelector('.cmdk-item-title').textContent;
+        closeCmdK();
+        console.log('Selected:', title);
+      }
+    }
+  });
+
+  cmdkTrigger.addEventListener('click', openCmdK);
+  cmdkTrigger.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCmdK(); }
+  });
+  cmdkOverlay.addEventListener('click', (e) => {
+    if (e.target === cmdkOverlay) closeCmdK();
+  });
+  // 触摸设备没有 Enter 键,列表项必须可以直接点选
+  cmdkList.addEventListener('click', (e) => {
+    const item = e.target.closest('.cmdk-item');
+    if (item) {
+      selectedIdx = parseInt(item.dataset.idx, 10) || 0;
+      closeCmdK();
+    }
+  });
+  cmdkInput.addEventListener('input', () => {
+    selectedIdx = 0;
+    renderCommands();
+  });
+
+  renderCommands();
+
+  // ============ ㉔ BLOB MORPH ============
+  const blobPaths = [
+    // circle
+    'M100,20 C140,20 180,60 180,100 C180,140 140,180 100,180 C60,180 20,140 20,100 C20,60 60,20 100,20 Z',
+    // flower (4 petals)
+    'M100,20 C140,20 140,60 180,80 C200,100 180,140 140,140 C140,180 100,200 80,160 C60,200 20,180 40,140 C0,140 0,100 20,80 C0,60 40,20 80,40 C80,20 100,20 100,20 Z',
+    // star (5 points)
+    'M100,20 L120,80 L180,80 L130,120 L150,180 L100,140 L50,180 L70,120 L20,80 L80,80 Z',
+    // drop / teardrop
+    'M100,20 C140,20 170,80 170,130 C170,170 140,180 100,180 C60,180 30,170 30,130 C30,80 60,20 100,20 Z',
+    // wave / kidney
+    'M20,100 C20,40 80,20 100,40 C120,60 180,40 180,100 C180,160 120,180 100,160 C80,140 20,160 20,100 Z',
+    // cross / plus
+    'M70,20 L130,20 L130,70 L180,70 L180,130 L130,130 L130,180 L70,180 L70,130 L20,130 L20,70 L70,70 Z'
+  ];
+  const blobNames = ['Circle', 'Flower', 'Star', 'Drop', 'Wave', 'Cross'];
+  const blobShape = document.getElementById('blobShape');
+  const blobName = document.getElementById('blobName');
+  const blobCounter = document.getElementById('blobCounter');
+  const blobKeys = document.querySelectorAll('.blob-key');
+
+  let currentBlob = 0;
+
+  function morphTo(idx) {
+    if (idx === currentBlob) return;
+    gsap.to(blobShape, {
+      attr: { d: blobPaths[idx] },
+      duration: 1.4,
+      ease: 'elastic.out(1, 0.55)'
+    });
+    blobName.textContent = blobNames[idx];
+    blobCounter.textContent = String(idx + 1).padStart(2, '0') + ' / 06';
+    blobKeys.forEach((k, i) => {
+      k.style.background = i === idx ? 'rgba(184,89,64,0.3)' : 'rgba(255,255,255,0.08)';
+      k.style.borderColor = i === idx ? 'var(--accent)' : 'rgba(255,255,255,0.15)';
+      k.style.color = i === idx ? 'white' : 'rgba(255,255,255,0.7)';
+    });
+    currentBlob = idx;
+  }
+
+  blobKeys.forEach((k, i) => k.addEventListener('click', () => morphTo(i)));
+
+  // Auto-cycle every 3.5s
+  setInterval(() => {
+    morphTo((currentBlob + 1) % blobPaths.length);
+  }, 3500);
+
+})();
+</script>
+</body>
+</html>

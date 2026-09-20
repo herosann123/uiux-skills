@@ -1,0 +1,2116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>10 种高级 UI 交互 · 演示文档</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..900&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/Draggable.min.js"></script>
+<style>
+  :root {
+    --bg: #f4f0e8;
+    --bg-2: #ebe5d6;
+    --bg-3: #ddd5c2;
+    --ink: #161616;
+    --ink-soft: #4a4742;
+    --muted: #9a958c;
+    --accent: #b85940;
+    --accent-2: #2d4a3e;
+    --gold: #c9a368;
+    --border: rgba(22, 22, 22, 0.14);
+    --border-strong: rgba(22, 22, 22, 0.32);
+    --serif: 'Fraunces', 'Times New Roman', serif;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    cursor: default;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 触摸设备：去掉双击缩放延迟，保持滚动流畅 */
+  button, a, [onclick], .glass-switch, .scroll-cue {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  ::selection { background: var(--ink); color: var(--bg); }
+
+  /* ---------- Header ---------- */
+  header.topnav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    background: rgba(244, 240, 232, 0.85);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+    height: 56px;
+    display: flex;
+    align-items: center;
+    padding: 0 32px;
+  }
+  header.topnav .brand {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 17px;
+    letter-spacing: -0.01em;
+    margin-right: 48px;
+  }
+  header.topnav .brand em {
+    font-style: italic;
+    color: var(--accent);
+    font-weight: 400;
+  }
+  header.topnav nav {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  header.topnav nav::-webkit-scrollbar { display: none; }
+  header.topnav nav a {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    text-decoration: none;
+    padding: 6px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    letter-spacing: 0.02em;
+  }
+  header.topnav nav a:hover { background: rgba(22,22,22,0.06); color: var(--ink); }
+  header.topnav nav a span { color: var(--muted); margin-right: 4px; }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    padding: 168px 64px 120px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero .meta {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
+  .hero .meta::before {
+    content: '';
+    width: 32px;
+    height: 1px;
+    background: var(--ink);
+  }
+  .hero h1 {
+    font-family: var(--serif);
+    font-weight: 380;
+    font-size: clamp(56px, 9vw, 132px);
+    line-height: 0.95;
+    letter-spacing: -0.035em;
+    margin-bottom: 40px;
+    max-width: 1100px;
+  }
+  .hero h1 em {
+    font-style: italic;
+    color: var(--accent);
+    font-weight: 300;
+  }
+  .hero .lede {
+    font-size: 18px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    max-width: 560px;
+    margin-bottom: 56px;
+  }
+  .hero .scroll-cue {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .hero .scroll-cue .line {
+    width: 48px;
+    height: 1px;
+    background: var(--ink);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero .scroll-cue .line::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: var(--accent);
+    animation: scrollLine 2.4s ease-in-out infinite;
+  }
+  @keyframes scrollLine {
+    0% { left: -100%; }
+    50% { left: 100%; }
+    100% { left: 100%; }
+  }
+
+  /* ---------- Sections ---------- */
+  section.chapter {
+    padding: 120px 64px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  section.chapter .chapter-head {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 64px;
+    margin-bottom: 64px;
+    align-items: start;
+  }
+  .chapter-num {
+    font-family: var(--serif);
+    font-size: clamp(120px, 14vw, 220px);
+    font-weight: 300;
+    line-height: 0.85;
+    color: var(--bg-3);
+    letter-spacing: -0.04em;
+    font-feature-settings: "lnum";
+    user-select: none;
+    margin-top: -40px;
+  }
+  .chapter-meta {
+    padding-top: 24px;
+  }
+  .chapter-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .chapter-title {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(40px, 5vw, 64px);
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    margin-bottom: 24px;
+  }
+  .chapter-desc {
+    font-size: 16px;
+    color: var(--ink-soft);
+    max-width: 480px;
+    line-height: 1.65;
+  }
+  .chapter-desc strong {
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .demo-frame {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .demo-frame .demo-label {
+    position: absolute;
+    top: 16px; left: 16px;
+    z-index: 5;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: rgba(244, 240, 232, 0.7);
+    backdrop-filter: blur(6px);
+    padding: 4px 8px;
+    border-radius: 2px;
+  }
+  .demo-frame .demo-area {
+    min-height: 480px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .code-block {
+    background: #16140f;
+    color: #d4cdb8;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.65;
+    padding: 28px 32px;
+    border-radius: 4px;
+    margin-top: 32px;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .code-block .kw { color: #c9a368; }
+  .code-block .fn { color: #b85940; }
+  .code-block .num { color: #8aab94; }
+  .code-block .cmt { color: #6a6558; font-style: italic; }
+  .code-block .str { color: #a8b88c; }
+
+  /* ---------- Demo 1: Parallax ---------- */
+  .parallax-wrap {
+    height: 600px;
+    background: linear-gradient(180deg, #e6dfcb 0%, #d6cdb3 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  .parallax-layer {
+    position: absolute;
+    inset: 0;
+    will-change: transform;
+  }
+  .parallax-layer.sky {
+    background: radial-gradient(circle at 70% 30%, rgba(184,89,64,0.18), transparent 60%);
+  }
+  .parallax-layer.mountain {
+    background: linear-gradient(180deg, transparent 40%, #4a5568 40%, #2d3748 100%);
+    clip-path: polygon(0 60%, 15% 35%, 30% 55%, 50% 25%, 70% 50%, 85% 30%, 100% 55%, 100% 100%, 0 100%);
+  }
+  .parallax-layer.hills {
+    background: #2d4a3e;
+    clip-path: polygon(0 75%, 20% 60%, 40% 70%, 60% 55%, 80% 65%, 100% 58%, 100% 100%, 0 100%);
+    opacity: 0.85;
+  }
+  .parallax-layer.trees {
+    background: #1a3d2e;
+    clip-path: polygon(0 88%, 8% 75%, 15% 82%, 22% 72%, 30% 80%, 38% 70%, 45% 82%, 55% 74%, 62% 84%, 70% 75%, 78% 83%, 85% 73%, 92% 81%, 100% 78%, 100% 100%, 0 100%);
+  }
+  .parallax-sun {
+    position: absolute;
+    top: 18%;
+    right: 22%;
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #f0d8a0 0%, #c9a368 60%, transparent 100%);
+    box-shadow: 0 0 80px rgba(201, 163, 104, 0.4);
+  }
+  .parallax-bird {
+    position: absolute;
+    width: 24px; height: 8px;
+    border-top: 2px solid var(--ink);
+    border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+    border-bottom: none;
+    border-left: none;
+    border-right: none;
+    transform: rotate(0);
+  }
+  .parallax-bird::before, .parallax-bird::after {
+    content: '';
+    position: absolute;
+    width: 12px; height: 8px;
+    border-top: 2px solid var(--ink);
+    border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+    top: -1px;
+  }
+  .parallax-bird::before { left: -10px; transform: rotate(-15deg); }
+  .parallax-bird::after { right: -10px; transform: rotate(15deg); }
+  .parallax-cue {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: rgba(22,22,22,0.5);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    z-index: 10;
+  }
+
+  /* ---------- Demo 2: Scroll-triggered ---------- */
+  .reveal-demo {
+    height: 600px;
+    overflow-y: auto;
+    background: var(--bg-2);
+    position: relative;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch; /* iOS 动量滚动 */
+    overscroll-behavior: contain; /* 防滚动穿透 */
+  }
+  .reveal-track {
+    height: 1800px;
+    position: relative;
+  }
+  .reveal-stage {
+    position: sticky;
+    top: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .reveal-card {
+    width: 280px;
+    height: 360px;
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 20px 60px rgba(22,22,22,0.08);
+    transform-origin: center;
+    will-change: transform, opacity;
+  }
+  .reveal-card-img {
+    width: 100%;
+    height: 180px;
+    background: linear-gradient(135deg, #c9a368 0%, #b85940 100%);
+    border-radius: 4px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .reveal-card-img::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3), transparent 50%);
+  }
+  .reveal-card-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .reveal-card-title {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    letter-spacing: -0.02em;
+  }
+  .reveal-card-meta {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .reveal-progress {
+    position: absolute;
+    top: 24px; right: 24px;
+    width: 4px;
+    height: 200px;
+    background: rgba(22,22,22,0.1);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .reveal-progress-fill {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    height: 0%;
+    transition: height 0.1s linear;
+  }
+  .reveal-cue {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    z-index: 5;
+  }
+
+  /* ---------- Demo 3: Card Stack ---------- */
+  .stack-demo {
+    height: 600px;
+    background: linear-gradient(180deg, #ebe5d6 0%, #ddd5c2 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .stack-stage {
+    position: relative;
+    width: min(320px, 100%);
+    height: 420px;
+    touch-action: none; /* 触摸拖拽不被浏览器当作滚动 */
+  }
+  .stack-card {
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-radius: 12px;
+    padding: 28px;
+    box-shadow: 0 8px 32px rgba(22,22,22,0.12);
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    will-change: transform;
+    display: flex;
+    flex-direction: column;
+  }
+  .stack-card:active { cursor: grabbing; }
+  .stack-card .avatar {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #c9a368, #b85940);
+    margin-bottom: 20px;
+  }
+  .stack-card .name {
+    font-family: var(--serif);
+    font-size: 24px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    letter-spacing: -0.02em;
+  }
+  .stack-card .role {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 24px;
+  }
+  .stack-card .tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: auto;
+  }
+  .stack-card .tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .stack-hint {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ---------- Demo 4: Magnetic ---------- */
+  .magnetic-demo {
+    height: 600px;
+    background: linear-gradient(135deg, #2d4a3e 0%, #1a2e26 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    color: #ebe5d6;
+  }
+  .magnetic-bg {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(184,89,64,0.3), transparent 40%);
+    pointer-events: none;
+  }
+  .magnetic-area {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .magnetic-button {
+    position: relative;
+    background: var(--accent);
+    color: var(--bg);
+    padding: 22px 44px;
+    border-radius: 100px;
+    font-family: var(--sans);
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    will-change: transform;
+    box-shadow: 0 12px 40px rgba(184, 89, 64, 0.4);
+  }
+  .magnetic-button:hover { background: #d36b50; }
+  .magnetic-button .arrow {
+    display: inline-block;
+    margin-left: 8px;
+    transition: transform 0.3s ease;
+  }
+  .magnetic-button:hover .arrow { transform: translateX(4px); }
+  .magnetic-hint {
+    position: absolute;
+    bottom: 32px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: rgba(235,229,214,0.5);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ---------- Demo 5: Text Reveal ---------- */
+  .reveal-text-demo {
+    height: 600px;
+    background: var(--bg-2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .reveal-text-stage {
+    text-align: center;
+    max-width: 720px;
+    padding: 0 32px;
+  }
+  .reveal-text-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    opacity: 0;
+  }
+  .reveal-text-line {
+    font-family: var(--serif);
+    font-size: clamp(36px, 5vw, 64px);
+    font-weight: 380;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    color: var(--ink);
+    margin-bottom: 16px;
+  }
+  .reveal-word {
+    display: inline-block;
+    overflow: hidden;
+    vertical-align: top;
+  }
+  .reveal-word > span {
+    display: inline-block;
+    transform: translateY(110%);
+    will-change: transform;
+  }
+  .reveal-text-cta {
+    margin-top: 48px;
+    opacity: 0;
+  }
+  .reveal-text-cta button {
+    background: var(--ink);
+    color: var(--bg);
+    border: none;
+    padding: 14px 28px;
+    border-radius: 100px;
+    font-family: var(--sans);
+    font-size: 13px;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+  }
+  .reveal-text-cta button:hover { background: var(--accent); }
+
+  /* ---------- Demo 6: SVG Path ---------- */
+  .svgpath-demo {
+    height: 600px;
+    background: var(--bg-2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .svgpath-canvas {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    inset: 0;
+  }
+  .svgpath-svg {
+    width: 100%;
+    height: 100%;
+  }
+  .svgpath-path {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .svgpath-path.accent {
+    stroke: var(--accent);
+    stroke-width: 2;
+  }
+  .svgpath-controls {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    z-index: 5;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: max-content;
+    max-width: 90%;
+  }
+  .svgpath-controls button {
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    padding: 10px 20px;
+    border-radius: 100px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink);
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .svgpath-controls button:hover { background: var(--ink); color: var(--bg); }
+  .svgpath-cue {
+    position: absolute;
+    top: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* ---------- Demo 7: Spring ---------- */
+  .spring-demo {
+    height: 600px;
+    background: linear-gradient(180deg, #ebe5d6 0%, #ddd5c2 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .spring-stage {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    cursor: crosshair;
+  }
+  .spring-ball {
+    position: absolute;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #d36b50, #b85940);
+    box-shadow: 0 12px 32px rgba(184, 89, 64, 0.4);
+    cursor: grab;
+    will-change: transform;
+    touch-action: none; /* 手指拖拽小球时锁定滚动 */
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .spring-ball:active { cursor: grabbing; }
+  .spring-target {
+    position: absolute;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    border: 2px dashed var(--muted);
+    transform: translate(-50%, -50%);
+  }
+  .spring-target::after {
+    content: 'target';
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .spring-hint {
+    position: absolute;
+    top: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .spring-info {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    letter-spacing: 0.05em;
+    display: flex;
+    gap: 12px 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: max-content;
+    max-width: 90%;
+  }
+  .spring-info span b {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* ---------- Demo 8: Counter ---------- */
+  .counter-demo {
+    height: 600px;
+    background: var(--bg-2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .counter-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+  }
+  .counter-display {
+    font-family: var(--serif);
+    font-size: clamp(96px, 14vw, 192px);
+    font-weight: 380;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    color: var(--ink);
+    display: flex;
+    height: 1.2em;
+    overflow: hidden;
+  }
+  .counter-digit {
+    width: 0.6em;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+  .counter-digit-strip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    will-change: transform;
+  }
+  .counter-digit-strip span {
+    flex: 0 0 1.2em;
+    height: 1.2em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .counter-controls {
+    margin-top: 48px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .counter-controls button {
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    padding: 10px 20px;
+    border-radius: 100px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink);
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .counter-controls button:hover { background: var(--ink); color: var(--bg); }
+  .counter-controls button.primary { background: var(--ink); color: var(--bg); }
+  .counter-controls button.primary:hover { background: var(--accent); }
+
+  /* ---------- Demo 9: 3D Tilt ---------- */
+  .tilt-demo {
+    height: 600px;
+    background: linear-gradient(135deg, #ebe5d6 0%, #c9a368 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    perspective: 1200px;
+  }
+  .tilt-card {
+    width: min(320px, 100%);
+    height: 420px;
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 28px;
+    box-shadow: 0 30px 80px rgba(22,22,22,0.15);
+    will-change: transform;
+    transform-style: preserve-3d;
+    position: relative;
+    touch-action: none; /* 触摸拖动倾斜时锁定滚动 */
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .tilt-card-image {
+    width: 100%;
+    height: 220px;
+    background: linear-gradient(135deg, #b85940, #c9a368);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .tilt-card-image::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.25), transparent 50%);
+  }
+  .tilt-card-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .tilt-card-title {
+    font-family: var(--serif);
+    font-size: 28px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+  .tilt-card-meta {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .tilt-shine {
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    pointer-events: none;
+    background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(255,255,255,0.5), transparent 40%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .tilt-card:hover .tilt-shine { opacity: 1; }
+  .tilt-hint {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* ---------- Demo 10: Glassmorphism ---------- */
+  .glass-demo {
+    height: 600px;
+    background: linear-gradient(135deg, #b85940 0%, #c9a368 50%, #2d4a3e 100%);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .glass-shapes {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .glass-shape {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(2px);
+  }
+  .glass-shape.s1 {
+    width: 280px; height: 280px;
+    background: radial-gradient(circle, #f0d8a0, transparent 70%);
+    top: 10%; left: 8%;
+    animation: floatA 12s ease-in-out infinite;
+  }
+  .glass-shape.s2 {
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, #ebe5d6, transparent 70%);
+    top: 60%; right: 12%;
+    animation: floatB 14s ease-in-out infinite;
+  }
+  .glass-shape.s3 {
+    width: 160px; height: 160px;
+    background: radial-gradient(circle, #1a3d2e, transparent 70%);
+    bottom: 8%; left: 30%;
+    animation: floatA 16s ease-in-out infinite reverse;
+  }
+  @keyframes floatA {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    50% { transform: translate(40px, -30px) rotate(15deg); }
+  }
+  @keyframes floatB {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    50% { transform: translate(-30px, 40px) rotate(-20deg); }
+  }
+  .glass-card {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 16px;
+    padding: 36px 40px;
+    width: min(360px, calc(100vw - 64px));
+    box-shadow: 0 20px 60px rgba(22,22,22,0.2);
+    position: relative;
+    z-index: 2;
+  }
+  .glass-card h3 {
+    font-family: var(--serif);
+    font-size: 28px;
+    font-weight: 500;
+    color: white;
+    margin-bottom: 12px;
+    letter-spacing: -0.02em;
+  }
+  .glass-card p {
+    font-size: 14px;
+    color: rgba(255,255,255,0.85);
+    margin-bottom: 28px;
+    line-height: 1.6;
+  }
+  .glass-toggle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-top: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    font-size: 13px;
+  }
+  .glass-switch {
+    width: 40px; height: 22px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 100px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  .glass-switch::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 18px; height: 18px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .glass-switch.on { background: var(--accent); }
+  .glass-switch.on::after { transform: translateX(18px); }
+  .glass-controls {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 3;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: max-content;
+    max-width: 90%;
+  }
+  .glass-controls button {
+    background: rgba(255,255,255,0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 100px;
+    font-family: var(--mono);
+    font-size: 10px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .glass-controls button:hover { background: rgba(255,255,255,0.3); }
+  .glass-controls button.active { background: white; color: var(--ink); }
+
+  /* ---------- Footer ---------- */
+  footer {
+    padding: 120px 64px 80px;
+    background: var(--ink);
+    color: var(--bg);
+  }
+  footer .grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 64px;
+    margin-bottom: 80px;
+  }
+  footer h2 {
+    font-family: var(--serif);
+    font-size: clamp(48px, 6vw, 96px);
+    font-weight: 380;
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+  }
+  footer h2 em { color: var(--accent); font-style: italic; }
+  footer h4 {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  footer ul { list-style: none; }
+  footer li {
+    font-size: 13px;
+    color: var(--bg);
+    margin-bottom: 8px;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+    cursor: pointer;
+  }
+  footer li:hover { opacity: 1; color: var(--accent); }
+  footer .credits {
+    border-top: 1px solid rgba(244,240,232,0.15);
+    padding-top: 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 900px) {
+    header.topnav { padding: 0 20px; }
+    header.topnav .brand { margin-right: 24px; font-size: 15px; }
+    .hero, section.chapter, footer { padding-left: 24px; padding-right: 24px; }
+    .hero { padding-top: 120px; padding-bottom: 80px; }
+    section.chapter { padding-top: 80px; padding-bottom: 80px; }
+    section.chapter .chapter-head { grid-template-columns: 1fr; gap: 24px; margin-bottom: 40px; }
+    .chapter-num { font-size: 80px; margin-top: 0; }
+    footer .grid { grid-template-columns: 1fr; gap: 40px; }
+    .glass-card { padding: 28px 24px; }
+  }
+
+  /* 触摸设备(手机 / 平板,含宽屏平板):提示文案换成触摸语义 */
+  @media (hover: none), (pointer: coarse) {
+    .hint-mouse { display: none; }
+    .hint-touch { display: inline; }
+  }
+  .hint-touch { display: none; }
+
+  /* 手机横屏 / 短视口:压缩 demo 高度避免内容被裁切 */
+  @media (max-height: 700px) {
+    .parallax-wrap, .reveal-demo, .stack-demo, .magnetic-demo,
+    .reveal-text-demo, .svgpath-demo, .spring-demo, .counter-demo,
+    .tilt-demo, .glass-demo { height: min(600px, 88vh); }
+    .stack-stage { height: min(420px, 60vh); }
+    .tilt-card { height: min(420px, 62vh); }
+  }
+</style>
+</head>
+<body>
+
+<header class="topnav">
+  <div class="brand">10 · <em>Advanced UI</em></div>
+  <nav>
+    <a href="#ch01"><span>01</span>Parallax</a>
+    <a href="#ch02"><span>02</span>Scroll</a>
+    <a href="#ch03"><span>03</span>Cards</a>
+    <a href="#ch04"><span>04</span>Magnetic</a>
+    <a href="#ch05"><span>05</span>Reveal</a>
+    <a href="#ch06"><span>06</span>SVG</a>
+    <a href="#ch07"><span>07</span>Spring</a>
+    <a href="#ch08"><span>08</span>Counter</a>
+    <a href="#ch09"><span>09</span>3D Tilt</a>
+    <a href="#ch10"><span>10</span>Glass</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="meta">
+    <span>Interactive Documentation</span>
+    <span>·</span>
+    <span>10 Patterns · 2025</span>
+  </div>
+  <h1>Advanced <em>UI</em> Interaction<br>Patterns, Decoded.</h1>
+  <p class="lede">把视频里那些看似"高级"的动效拆解为可复用的原理与代码。每一节都包含一个真实可触发的 demo —— 滚动、拖拽、悬停、点击，看见原理落地。</p>
+  <div class="scroll-cue" onclick="document.getElementById('ch01').scrollIntoView({behavior:'smooth'})">
+    <span class="line"></span>
+    <span>Begin · 开始</span>
+  </div>
+</section>
+
+<!-- ================== 01 PARALLAX ================== -->
+<section class="chapter" id="ch01">
+  <div class="chapter-head">
+    <div class="chapter-num">01</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Scroll-driven · 输入 = 滚动距离</div>
+      <h2 class="chapter-title">视差滚动</h2>
+      <p class="chapter-desc">不同图层以<strong>不同速率反向位移</strong>，制造深度错觉。本质是把「滚动距离」乘以一个 <strong>速率系数</strong> 喂给每层的 <code>translateY</code>。系数差异越大，深度感越强。</p>
+    </div>
+  </div>
+
+  <div class="demo-frame">
+    <div class="demo-label">demo · scroll inside page</div>
+    <div class="parallax-wrap" id="parallaxWrap">
+      <div class="parallax-layer sky" data-speed="0.1"></div>
+      <div class="parallax-sun" data-speed="0.2"></div>
+      <div class="parallax-bird" style="top:25%;left:15%" data-speed="0.4"></div>
+      <div class="parallax-bird" style="top:18%;left:35%" data-speed="0.4"></div>
+      <div class="parallax-bird" style="top:30%;left:55%" data-speed="0.4"></div>
+      <div class="parallax-layer mountain" data-speed="0.3"></div>
+      <div class="parallax-layer hills" data-speed="0.55"></div>
+      <div class="parallax-layer trees" data-speed="0.85"></div>
+      <div class="parallax-cue">↓ Scroll the page ↓</div>
+    </div>
+  </div>
+
+  <pre class="code-block"><span class="cmt">// 核心：每帧读取 scrollY，按 speed 系数位移</span>
+<span class="kw">const</span> layers = document.querySelectorAll(<span class="str">'.parallax-layer'</span>);
+
+window.addEventListener(<span class="str">'scroll'</span>, () => {
+  <span class="kw">const</span> y = window.scrollY;
+  layers.forEach(layer => {
+    <span class="kw">const</span> speed = +layer.dataset.speed;
+    layer.style.transform = <span class="str">`translateY(${y * speed}px)`</span>;
+  });
+});
+</pre>
+</section>
+
+<!-- ================== 02 SCROLL-TRIGGERED ================== -->
+<section class="chapter" id="ch02">
+  <div class="chapter-head">
+    <div class="chapter-num">02</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Scroll-driven · 元素进入视口触发</div>
+      <h2 class="chapter-title">滚动触发显隐</h2>
+      <p class="chapter-desc">把<strong>滚动进度 0→1</strong> 映射成 <strong>动画进度 0→1</strong>，元素从「缩放 + 透明」过渡到「正常 + 实色」。用 GSAP 的 ScrollTrigger 时只需一行 <code>scrub</code>。</p>
+    </div>
+  </div>
+
+  <div class="demo-frame">
+    <div class="demo-label">demo · scroll the inner panel</div>
+    <div class="reveal-demo" id="revealDemo">
+      <div class="reveal-track">
+        <div class="reveal-stage">
+          <div class="reveal-card" id="revealCard">
+            <div class="reveal-card-img"></div>
+            <div class="reveal-card-tag">Featured · 精选</div>
+            <div class="reveal-card-title">午后光影</div>
+            <div class="reveal-card-meta">摄影 · 第 12 期</div>
+          </div>
+        </div>
+      </div>
+      <div class="reveal-progress">
+        <div class="reveal-progress-fill" id="revealFill"></div>
+      </div>
+      <div class="reveal-cue">Scroll the panel · 向下滚动</div>
+    </div>
+  </div>
+
+  <pre class="code-block"><span class="cmt">// GSAP ScrollTrigger · scrub 把动画进度绑死到滚动进度</span>
+gsap.fromTo(<span class="str">'#card'</span>,
+  { scale: <span class="num">0.7</span>, opacity: <span class="num">0</span>, y: <span class="num">60</span> },
+  {
+    scale: <span class="num">1</span>, opacity: <span class="num">1</span>, y: <span class="num">0</span>,
+    scrollTrigger: {
+      trigger: <span class="str">'#scrollArea'</span>,
+      start: <span class="str">'top top'</span>,
+      end: <span class="str">'bottom bottom'</span>,
+      scrub: <span class="num">true</span>        <span class="cmt">// 关键：跟手</span>
+    }
+  }
+);
+</pre>
+</section>
+
+<!-- ================== 03 CARD STACK ================== -->
+<section class="chapter" id="ch03">
+  <div class="chapter-head">
+    <div class="chapter-num">03</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Gesture-driven · 拖拽跟手</div>
+      <h2 class="chapter-title">卡片堆叠滑动</h2>
+      <p class="chapter-desc">跟手阶段实时绑定 <strong>transform</strong>；松手阶段靠 <strong>阈值 + 速度</strong> 二选一决定「飞出」还是「弹簧回位」。鼠标拖拽即可，松手后新卡片从下层补上。</p>
+    </div>
+  </div>
+
+  <div class="demo-frame">
+    <div class="demo-label">demo · drag horizontally</div>
+    <div class="stack-demo">
+      <div class="stack-stage" id="stackStage">
+        <div class="stack-card" style="background:linear-gradient(135deg,#b85940,#c9a368);transform:translateY(28px) scale(0.94);opacity:0.7"></div>
+        <div class="stack-card" style="background:linear-gradient(135deg,#2d4a3e,#1a3d2e);transform:translateY(14px) scale(0.97);opacity:0.85"></div>
+        <div class="stack-card" id="stackTop">
+          <div class="avatar"></div>
+          <div class="name">李 一然</div>
+          <div class="role">Senior Product Designer</div>
+          <div class="tags">
+            <span class="tag">Motion</span>
+            <span class="tag">Systems</span>
+            <span class="tag">Brand</span>
+          </div>
+        </div>
+      </div>
+      <div class="stack-hint">← Drag · 拖拽 →</div>
+    </div>
+  </div>
+
+  <pre class="code-block"><span class="cmt">// 简化版：跟手 + 松手判定</span>
+<span class="kw">let</span> dx = <span class="num">0</span>, startX = <span class="num">0</span>;
+
+card.addEventListener(<span class="str">'pointerdown'</span>, e => {
+  startX = e.clientX;
+  card.setPointerCapture(e.pointerId);
+});
+
+card.addEventListener(<span class="str">'pointermove'</span>, e => {
+  dx = e.clientX - startX;
+  card.style.transform = <span class="str">`translate(${dx}px,0) rotate(${dx*0.1}deg)`</span>;
+});
+
+card.addEventListener(<span class="str">'pointerup'</span>, () => {
+  <span class="kw">if</span> (Math.abs(dx) > <span class="num">120</span>) fly(dx > <span class="num">0</span> ? <span class="num">1</span> : -<span class="num">1</span>);
+  <span class="kw">else</span> gsap.to(card, { x: <span class="num">0</span>, rotation: <span class="num">0</span>, duration: <span class="num">0.6</span>, ease: <span class="str">'elastic.out(1,0.5)'</span> });
+});
+</pre>
+</section>
+
+<!-- ================== 04 MAGNETIC ================== -->
+<section class="chapter" id="ch04">
+  <div class="chapter-head">
+    <div class="chapter-num">04</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Pointer-driven · 光标吸引</div>
+      <h2 class="chapter-title">磁吸按钮</h2>
+      <p class="chapter-desc">把光标位置转成<strong>相对按钮中心的偏移向量</strong>，乘上一个「吸附强度系数」喂给 <code>transform</code>。系数 <strong>0.2~0.4</strong> 最舒服 —— 完全跟手（=1）会像被拽走，太小又没存在感。</p>
+    </div>
+  </div>
+
+  <div class="demo-frame">
+    <div class="demo-label">demo · move cursor near button</div>
+    <div class="magnetic-demo" id="magneticDemo">
+      <div class="magnetic-bg" id="magneticBg"></div>
+      <div class="magnetic-area">
+        <button class="magnetic-button" id="magneticBtn">Get Started <span class="arrow">→</span></button>
+      </div>
+      <div class="magnetic-hint">
+        <span class="hint-mouse">Move cursor · 移动鼠标</span>
+        <span class="hint-touch">Tap · 轻触按钮试试</span>
+      </div>
+    </div>
+  </div>
+
+  <pre class="code-block"><span class="cmt">// 核心：鼠标偏移 × 0.3 强度系数</span>
+btn.addEventListener(<span class="str">'mousemove'</span>, e => {
+  <span class="kw">const</span> r = btn.getBoundingClientRect();
+  <span class="kw">const</span> cx = r.left + r.width / <span class="num">2</span>;
+  <span class="kw">const</span> cy = r.top + r.height / <span class="num">2</span>;
+  <span class="kw">const</span> dx = (e.clientX - cx) * <span class="num">0.3</span>;
+  <span class="kw">const</span> dy = (e.clientY - cy) * <span class="num">0.3</span>;
+  btn.style.transform = <span class="str">`translate(${dx}px,${dy}px)`</span>;
+});
+
+btn.addEventListener(<span class="str">'mouseleave'</span>, () => {
+  btn.style.transform = <span class="str">'translate(0,0)'</span>;
+});
+</pre>
+</section>
+
+<!-- ================== 05 TEXT REVEAL ================== -->
+<section class="chapter" id="ch05">
+  <div class="chapter-head">
+    <div class="chapter-num">05</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Timeline · 时间轴驱动</div>
+      <h2 class="chapter-title">文字逐字揭示</h2>
+      <p class="chapter-desc">把字符串拆成 <strong>字符 / 词</strong>，每个单位装进一个 <code>overflow:hidden</code> 的 mask，内部 span 从下方滑入。<strong>stagger</strong> 决定节奏 —— 30ms/字紧凑，60ms/字从容。</p>
+    </div>
+  </div>
+
+  <div class="demo-frame">
+    <div class="demo-label">demo · click reveal</div>
+    <div class="reveal-text-demo" id="revealTextDemo">
+      <div class="reveal-text-stage">
+        <div class="reveal-text-eyebrow">Chapter 05 · 揭示</div>
+        <h2 class="reveal-text-line" data-reveal>设计是</h2>
+        <h2 class="reveal-text-line" data-reveal>有意的<em style="color:var(--accent);font-style:italic">停顿</em>。</h2>
+        <div class="reveal-text-cta">
+          <button id="revealTextBtn">Replay · 再来一次</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <pre class="code-block"><span class="cmt">// 1. DOM 拆词</span>
+<span class="kw">const</span> line = document.querySelector(<span class="str">'.line'</span>);
+line.innerHTML = line.textContent
+  .split(<span class="str">' '</span>)
+  .map(w => <span class="str">`&lt;span class="word"&gt;&lt;span&gt;${w}&lt;/span&gt;&lt;/span&gt;`</span>)
+  .join(<span class="str">' '</span>);
+
+<span class="cmt">// 2. GSAP stagger 入场</span>
+gsap.from(<span class="str">'.word &gt; span'</span>, {
+  yPercent: <span class="num">110</span>,
+  duration: <span class="num">0.8</span>,
+  ease: <span class="str">'expo.out'</span>,
+  stagger: <span class="num">0.04</span>     <span class="cmt">// 40ms/词</span>
+});
+</pre>
+</section>
+
+<!-- ================== 06 SVG PATH ================== -->
+<section class="chapter" id="ch06">
+  <div class="chapter-head">
+    <div class="chapter-num">06</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Timeline · 描边动画</div>
+      <h2 class="chapter-title">SVG 路径绘制</h2>
+      <p class="chapter-desc">SVG 的 <code>stroke-dasharray</code> 控制虚线长度，<code>stroke-dashoffset</code> 把虚线偏移出去 —— 当长度 = 周长时，偏移从周长动到 0，视觉上就是「画出」。</p>
+    </div>
+  </div>
+
+  <div class="demo-frame">
+    <div class="demo-label">demo · click redraw</div>
+    <div class="svgpath-demo">
+      <div class="svgpath-cue">Click to redraw · 点击重绘</div>
+      <svg class="svgpath-svg" viewBox="0 0 600 400" preserveAspectRatio="xMidYMid meet">
+        <path class="svgpath-path" d="M 80 300 Q 150 100, 300 200 T 520 150" id="path1"/>
+        <path class="svgpath-path accent" d="M 80 320 C 200 320, 250 200, 300 220 S 450 320, 520 250" id="path2"/>
+        <path class="svgpath-path" d="M 80 350 L 520 350" id="path3"/>
+      </svg>
+      <div class="svgpath-controls">
+        <button onclick="drawSVG()">Redraw · 重绘</button>
+        <button onclick="reverseSVG()">Reverse · 反向</button>
+      </div>
+    </div>
+  </div>
+
+  <pre class="code-block"><span class="cmt">// 1. 拿到路径总长</span>
+<span class="kw">const</span> path = document.querySelector(<span class="str">'path'</span>);
+<span class="kw">const</span> length = path.getTotalLength();
+
+<span class="cmt">// 2. 设置虚线长度 + 初始偏移</span>
+path.style.strokeDasharray = length;
+path.style.strokeDashoffset = length;
+
+<span class="cmt">// 3. 动画：偏移归 0 = 画出</span>
+gsap.to(path, {
+  strokeDashoffset: <span class="num">0</span>,
+  duration: <span class="num">2</span>,
+  ease: <span class="str">'power2.inOut'</span>
+});
+</pre>
+</section>
+
+<!-- ================== 07 SPRING ================== -->
+<section class="chapter" id="ch07">
+  <div class="chapter-head">
+    <div class="chapter-num">07</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Physics · 弹簧物理</div>
+      <h2 class="chapter-title">弹性回弹</h2>
+      <p class="chapter-desc">放弃 CSS 的 <code>cubic-bezier</code>，用 <strong>胡克定律 F = -kx - cv</strong> 每帧更新加速度→速度→位置。<strong>k 越大越硬</strong>，<strong>c 越大越快收敛</strong>。GSAP 用 <code>elastic.out</code>，Framer Motion 默认就是弹簧。</p>
+    </div>
+  </div>
+
+  <div class="demo-frame">
+    <div class="demo-label">demo · drag & release</div>
+    <div class="spring-demo">
+      <div class="spring-hint">Drag ball · 拖拽小球</div>
+      <div class="spring-stage" id="springStage">
+        <div class="spring-target" id="springTarget" style="left:50%;top:50%"></div>
+        <div class="spring-ball" id="springBall"></div>
+      </div>
+      <div class="spring-info">
+        <span>k (stiffness) = <b>0.08</b></span>
+        <span>d (damping) = <b>0.78</b></span>
+      </div>
+    </div>
+  </div>
+
+  <pre class="code-block"><span class="cmt">// 弹簧公式：每帧更新 v, x</span>
+<span class="kw">let</span> x = <span class="num">0</span>, v = <span class="num">0</span>, target = <span class="num">0</span>;
+<span class="kw">const</span> k = <span class="num">0.08</span>, d = <span class="num">0.78</span>;   <span class="cmt">// stiffness, damping</span>
+
+<span class="kw">function</span> tick() {
+  <span class="kw">const</span> a = -k * (x - target) - d * v;
+  v += a;
+  x += v;
+  ball.style.transform = <span class="str">`translate(${x}px,0)`</span>;
+  requestAnimationFrame(tick);
+}
+tick();
+</pre>
+</section>
+
+<!-- ================== 08 COUNTER ================== -->
+<section class="chapter" id="ch08">
+  <div class="chapter-head">
+    <div class="chapter-num">08</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Timeline · 数字翻牌</div>
+      <h2 class="chapter-title">数字翻牌计数</h2>
+      <p class="chapter-desc">每位数字 0~9 <strong>垂直堆叠</strong>在一个高度 = 1.2em 的容器里，显示数字 n 就是 <code>translateY(-n * 10%)</code>。配合 ease.expo 的<strong>缓出曲线</strong>才有「先快后慢停」的爽感。</p>
+    </div>
+  </div>
+
+  <div class="demo-frame">
+    <div class="demo-label">demo · click to animate</div>
+    <div class="counter-demo">
+      <div class="counter-label">Total Visitors · 总访客</div>
+      <div class="counter-display" id="counterDisplay">
+        <div class="counter-digit"><div class="counter-digit-strip" id="d0"></div></div>
+        <div class="counter-digit"><div class="counter-digit-strip" id="d1"></div></div>
+        <div class="counter-digit"><div class="counter-digit-strip" id="d2"></div></div>
+        <div class="counter-digit"><div class="counter-digit-strip" id="d3"></div></div>
+        <div class="counter-digit"><div class="counter-digit-strip" id="d4"></div></div>
+        <div class="counter-digit">,</div>
+        <div class="counter-digit"><div class="counter-digit-strip" id="d5"></div></div>
+        <div class="counter-digit"><div class="counter-digit-strip" id="d6"></div></div>
+        <div class="counter-digit"><div class="counter-digit-strip" id="d7"></div></div>
+      </div>
+      <div class="counter-controls">
+        <button onclick="countTo(12345,67)">→ 12,345.67</button>
+        <button onclick="countTo(99999,99)">→ 99,999.99</button>
+        <button class="primary" onclick="countTo(0,0)">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <pre class="code-block"><span class="cmt">// 每位数字：垂直堆叠 0-9，translateY 切换</span>
+<span class="kw">function</span> setDigit(strip, n) {
+  gsap.to(strip, {
+    yPercent: -n * <span class="num">10</span>,
+    duration: <span class="num">0.8</span>,
+    ease: <span class="str">'expo.out'</span>
+  });
+}
+
+<span class="cmt">// 总动效：obj 累加到目标，tween onUpdate 里逐位 setDigit</span>
+gsap.to(obj, {
+  value: <span class="num">12345.67</span>,
+  duration: <span class="num">2.4</span>,
+  ease: <span class="str">'expo.out'</span>,
+  onUpdate: () => {
+    <span class="kw">const</span> s = obj.value.toFixed(<span class="num">2</span>).padStart(<span class="num">9</span>, <span class="str">'0'</span>);
+    [...s].forEach((ch, i) => ch === <span class="str">','</span> ? <span class="num">0</span> : setDigit(strips[i], +ch));
+  }
+});
+</pre>
+</section>
+
+<!-- ================== 09 3D TILT ================== -->
+<section class="chapter" id="ch09">
+  <div class="chapter-head">
+    <div class="chapter-num">09</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">3D · 视觉欺骗</div>
+      <h2 class="chapter-title">3D 倾斜跟随光标</h2>
+      <p class="chapter-desc">父元素加 <code>perspective</code> 建立 3D 空间；子元素 <code>rotateX/Y</code> 与「指针相对中心」的偏移成正比。配合<strong>径向高光</strong>贴在指针位置 = 真实感拉满。</p>
+    </div>
+  </div>
+
+  <div class="demo-frame">
+    <div class="demo-label">demo · hover & move</div>
+    <div class="tilt-demo" id="tiltDemo">
+      <div class="tilt-card" id="tiltCard">
+        <div class="tilt-card-image"></div>
+        <div class="tilt-card-tag">Studio · 工作室</div>
+        <div class="tilt-card-title">Atelier Lumen</div>
+        <div class="tilt-card-meta">Paris · Est. 2019</div>
+        <div class="tilt-shine" id="tiltShine"></div>
+      </div>
+      <div class="tilt-hint">
+        <span class="hint-mouse">Hover · 悬停移动</span>
+        <span class="hint-touch">Touch &amp; drag · 按住拖动</span>
+      </div>
+    </div>
+  </div>
+
+  <pre class="code-block"><span class="cmt">// 核心：perspective + rotateX/Y 跟随光标</span>
+card.addEventListener(<span class="str">'mousemove'</span>, e => {
+  <span class="kw">const</span> r = card.getBoundingClientRect();
+  <span class="kw">const</span> cx = r.left + r.width / <span class="num">2</span>;
+  <span class="kw">const</span> cy = r.top + r.height / <span class="num">2</span>;
+  <span class="kw">const</span> dx = (e.clientX - cx) / r.width;
+  <span class="kw">const</span> dy = (e.clientY - cy) / r.height;
+
+  card.style.transform = <span class="str">`
+    perspective(1200px)
+    rotateY(${dx * <span class="num">12</span>}deg)
+    rotateX(${-dy * <span class="num">12</span>}deg)
+    translateZ(0)
+  `</span>;
+});
+</pre>
+</section>
+
+<!-- ================== 10 GLASSMORPHISM ================== -->
+<section class="chapter" id="ch10">
+  <div class="chapter-head">
+    <div class="chapter-num">10</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Visual · 玻璃拟态</div>
+      <h2 class="chapter-title">玻璃拟态切换</h2>
+      <p class="chapter-desc">靠 <code>backdrop-filter: blur()</code> 模糊后面内容 + <strong>半透明白色背景</strong> + <strong>1px 内描边</strong>。注意 <code>filter</code> 是状态属性，<strong>无法直接动画</strong> —— 切换时只能 toggle class 让 blur 跳变。</p>
+    </div>
+  </div>
+
+  <div class="demo-frame">
+    <div class="demo-label">demo · toggle states</div>
+    <div class="glass-demo" id="glassDemo">
+      <div class="glass-shapes">
+        <div class="glass-shape s1"></div>
+        <div class="glass-shape s2"></div>
+        <div class="glass-shape s3"></div>
+      </div>
+      <div class="glass-card" id="glassCard">
+        <h3>Zen Mode</h3>
+        <p>减少干扰，只保留最重要的通知。开启后系统将进入低噪音状态。</p>
+        <div class="glass-toggle-row">
+          <span>Notifications · 通知</span>
+          <div class="glass-switch on" id="switch1"></div>
+        </div>
+        <div class="glass-toggle-row">
+          <span>Sound Effects · 音效</span>
+          <div class="glass-switch" id="switch2"></div>
+        </div>
+        <div class="glass-toggle-row">
+          <span>Haptics · 触感反馈</span>
+          <div class="glass-switch on" id="switch3"></div>
+        </div>
+      </div>
+      <div class="glass-controls">
+        <button class="active" data-blur="20">Heavy · 重</button>
+        <button data-blur="10">Medium · 中</button>
+        <button data-blur="4">Light · 轻</button>
+      </div>
+    </div>
+  </div>
+
+  <pre class="code-block"><span class="cmt">// 核心 CSS</span>
+.glass {
+  background: rgba(<span class="num">255</span>, <span class="num">255</span>, <span class="num">255</span>, <span class="num">0.15</span>);
+  backdrop-filter: blur(<span class="num">20</span>px) saturate(<span class="num">180</span>%);
+  border: <span class="num">1</span>px solid rgba(<span class="num">255</span>, <span class="num">255</span>, <span class="num">255</span>, <span class="num">0.3</span>);
+}
+
+<span class="cmt">// ⚠️ backdrop-filter 是状态属性，不能 transition。
+// 切换时只能 toggle class，blur 直接跳变。</span>
+.glass.off { backdrop-filter: blur(<span class="num">0</span>); }
+</pre>
+</section>
+
+<!-- ================== FOOTER ================== -->
+<footer>
+  <div class="grid">
+    <div>
+      <h2>That's <em>all 10.</em></h2>
+      <p style="margin-top:24px;color:rgba(244,240,232,0.6);max-width:480px;">
+        真正难的不是单个动效，而是把多个组合成一个连贯的页面 —— 那叫 <strong style="color:var(--accent)">Motion Choreography</strong>。
+      </p>
+    </div>
+    <div>
+      <h4>Patterns · 分类索引</h4>
+      <ul>
+        <li><strong>滚动驱动</strong> · ① ②</li>
+        <li><strong>手势驱动</strong> · ③ ④</li>
+        <li><strong>时间轴</strong> · ⑤ ⑥ ⑧</li>
+        <li><strong>物理缓动</strong> · ⑦</li>
+        <li><strong>3D / 视觉</strong> · ⑨ ⑩</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Stack · 技术栈</h4>
+      <ul>
+        <li>GSAP · 3.12</li>
+        <li>ScrollTrigger</li>
+        <li>Draggable</li>
+        <li>Vanilla JS</li>
+        <li>Custom CSS</li>
+      </ul>
+    </div>
+  </div>
+  <div class="credits">
+    <span>10 Advanced UI Patterns</span>
+    <span>© 2025 · Built with care</span>
+  </div>
+</footer>
+
+<script>
+/* ================== 01 PARALLAX ================== */
+(function() {
+  const layers = document.querySelectorAll('.parallax-layer, .parallax-sun, .parallax-bird');
+  function update() {
+    const y = window.scrollY;
+    layers.forEach(l => {
+      const speed = parseFloat(l.dataset.speed) || 0;
+      l.style.transform = `translateY(${y * speed}px)`;
+    });
+  }
+  window.addEventListener('scroll', update, { passive: true });
+  update();
+})();
+
+/* ================== 02 SCROLL-TRIGGERED ================== */
+(function() {
+  const demo = document.querySelector('#revealDemo');
+  const card = document.querySelector('#revealCard');
+  const fill = document.querySelector('#revealFill');
+
+  gsap.set(card, { scale: 0.6, opacity: 0, y: 80 });
+
+  // 监听内部滚动容器（不是 window）
+  demo.addEventListener('scroll', () => {
+    const max = demo.scrollHeight - demo.clientHeight;
+    if (max <= 0) return;
+    const p = Math.min(1, Math.max(0, demo.scrollTop / max));
+    gsap.set(card, {
+      scale: 0.6 + p * 0.4,
+      opacity: p,
+      y: 80 - p * 80
+    });
+    fill.style.height = (p * 100) + '%';
+  });
+})();
+
+/* ================== 03 CARD STACK ================== */
+(function() {
+  const stage = document.getElementById('stackStage');
+  const cards = Array.from(stage.querySelectorAll('.stack-card'));
+  const N = cards.length;
+
+  // positions[i] = cards[i] 当前处于第几层（0=back, 1=middle, 2=top）
+  let positions = cards.map((_, i) => i);
+
+  const STATES = [
+    { y: 28, scale: 0.94, opacity: 0.7, z: 1 },
+    { y: 14, scale: 0.97, opacity: 0.85, z: 2 },
+    { y: 0,  scale: 1,    opacity: 1,    z: 3 }
+  ];
+
+  function topIdx() { return positions.indexOf(N - 1); }
+  function getTop() { return cards[topIdx()]; }
+
+  function applyStates() {
+    cards.forEach((c, i) => {
+      const s = STATES[positions[i]];
+      c.style.zIndex = s.z;
+      gsap.killTweensOf(c);
+      gsap.to(c, {
+        y: s.y, scale: s.scale, opacity: s.opacity,
+        duration: 0.5, ease: 'power2.out'
+      });
+    });
+  }
+
+  applyStates();
+
+  let startX = 0, startY = 0, dx = 0, dy = 0, dragging = false, topRef = null;
+
+  stage.addEventListener('pointerdown', (e) => {
+    topRef = getTop();
+    if (e.target !== topRef && !topRef.contains(e.target)) return;
+    dragging = true;
+    startX = e.clientX; startY = e.clientY;
+    dx = 0; dy = 0;
+    topRef.setPointerCapture(e.pointerId);
+    gsap.killTweensOf(topRef);
+  });
+
+  stage.addEventListener('pointermove', (e) => {
+    if (!dragging || !topRef) return;
+    dx = e.clientX - startX;
+    dy = e.clientY - startY;
+    topRef.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx * 0.08}deg)`;
+  });
+
+  stage.addEventListener('pointerup', releaseCard);
+  // 触摸拖拽被系统中断(如来电、手势切换)时也要正确复位
+  stage.addEventListener('pointercancel', releaseCard);
+
+  function releaseCard() {
+    if (!dragging || !topRef) return;
+    dragging = false;
+    const fly = Math.abs(dx) > 100 || Math.abs(dy) > 100;
+    const dirX = dx > 0 ? 1 : -1;
+    const flown = topRef;
+
+    if (fly) {
+      gsap.to(flown, {
+        x: dirX * 600, y: dy, rotation: dirX * 30, opacity: 0,
+        duration: 0.45, ease: 'power3.in',
+        onComplete: () => {
+          gsap.set(flown, { clearProps: 'all' });
+          // 所有 position +1 mod N：top → back, 其余依次上移
+          positions = positions.map(p => (p + 1) % N);
+          applyStates();
+          topRef = null;
+        }
+      });
+    } else {
+      gsap.to(flown, {
+        x: 0, y: 0, rotation: 0,
+        duration: 0.7, ease: 'elastic.out(1, 0.5)',
+        onComplete: () => { topRef = null; }
+      });
+    }
+  }
+})();
+
+/* ================== 04 MAGNETIC ================== */
+(function() {
+  const btn = document.getElementById('magneticBtn');
+  const demo = document.getElementById('magneticDemo');
+  const bg = document.getElementById('magneticBg');
+  const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+
+  function spotlight(x, y) {
+    const r = demo.getBoundingClientRect();
+    bg.style.setProperty('--mx', ((x - r.left) / r.width) * 100 + '%');
+    bg.style.setProperty('--my', ((y - r.top) / r.height) * 100 + '%');
+  }
+
+  if (finePointer.matches) {
+    // 桌面：光标接近 → 磁吸偏移
+    btn.addEventListener('mousemove', (e) => {
+      const r = btn.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const dx = (e.clientX - cx) * 0.35;
+      const dy = (e.clientY - cy) * 0.35;
+      btn.style.transform = `translate(${dx}px, ${dy}px)`;
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.transform = 'translate(0, 0)';
+    });
+    demo.addEventListener('mousemove', (e) => spotlight(e.clientX, e.clientY));
+  } else {
+    // 触摸设备：按下时向触点吸附，松手弹性回位(等价的「磁」反馈)
+    btn.addEventListener('pointerdown', (e) => {
+      const r = btn.getBoundingClientRect();
+      const dx = (e.clientX - (r.left + r.width / 2)) * 0.35;
+      const dy = (e.clientY - (r.top + r.height / 2)) * 0.35;
+      gsap.to(btn, { x: dx, y: dy, scale: 0.96, duration: 0.25, ease: 'power2.out', overwrite: true });
+      spotlight(e.clientX, e.clientY);
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(evt =>
+      btn.addEventListener(evt, () => {
+        gsap.to(btn, { x: 0, y: 0, scale: 1, duration: 0.9, ease: 'elastic.out(1, 0.45)', overwrite: true });
+      })
+    );
+    demo.addEventListener('pointerdown', (e) => spotlight(e.clientX, e.clientY));
+    demo.addEventListener('pointermove', (e) => spotlight(e.clientX, e.clientY));
+  }
+})();
+
+/* ================== 05 TEXT REVEAL ================== */
+(function() {
+  const lines = document.querySelectorAll('[data-reveal]');
+  const eyebrow = document.querySelector('.reveal-text-eyebrow');
+  const cta = document.querySelector('.reveal-text-cta');
+
+  function setupLine(el) {
+    const html = el.innerHTML;
+    const parts = html.split(/(\s+|<[^>]+>)/);
+    let out = '';
+    parts.forEach(p => {
+      if (p.match(/^\s+$/) || p === '') {
+        out += p;
+      } else if (p.startsWith('<')) {
+        out += p;
+      } else {
+        const words = p.split(/(\s+)/);
+        words.forEach(w => {
+          if (w.match(/^\s+$/) || w === '') {
+            out += w;
+          } else {
+            out += `<span class="reveal-word"><span>${w}</span></span>`;
+          }
+        });
+      }
+    });
+    el.innerHTML = out;
+  }
+
+  lines.forEach(setupLine);
+
+  function animate() {
+    gsap.set('.reveal-word > span', { yPercent: 110 });
+    gsap.set([eyebrow, cta], { opacity: 0, y: 20 });
+    const tl = gsap.timeline();
+    tl.to(eyebrow, { opacity: 1, y: 0, duration: 0.6, ease: 'expo.out' })
+      .to('.reveal-word > span', {
+        yPercent: 0,
+        duration: 0.9,
+        ease: 'expo.out',
+        stagger: 0.045
+      }, '-=0.2')
+      .to(cta, { opacity: 1, y: 0, duration: 0.6, ease: 'expo.out' }, '-=0.4');
+  }
+
+  document.getElementById('revealTextBtn').addEventListener('click', animate);
+  animate();
+})();
+
+/* ================== 06 SVG PATH ================== */
+(function() {
+  const paths = document.querySelectorAll('.svgpath-path');
+  const lengths = [];
+  paths.forEach(p => {
+    const L = p.getTotalLength();
+    lengths.push(L);
+    p.style.strokeDasharray = L;
+    p.style.strokeDashoffset = L;
+  });
+
+  window.drawSVG = function() {
+    paths.forEach((p, i) => {
+      gsap.fromTo(p,
+        { strokeDashoffset: lengths[i] },
+        { strokeDashoffset: 0, duration: 1.8, ease: 'power2.inOut', delay: i * 0.15 }
+      );
+    });
+  };
+
+  window.reverseSVG = function() {
+    paths.forEach((p, i) => {
+      gsap.to(p, { strokeDashoffset: lengths[i], duration: 1.5, ease: 'power2.inOut', delay: i * 0.1 });
+    });
+  };
+
+  drawSVG();
+})();
+
+/* ================== 07 SPRING ================== */
+(function() {
+  const stage = document.getElementById('springStage');
+  const ball = document.getElementById('springBall');
+  const target = document.getElementById('springTarget');
+  const rect = stage.getBoundingClientRect();
+
+  let x = rect.width / 2 - 32, y = rect.height / 2 - 32;
+  let vx = 0, vy = 0;
+  let tx = rect.width / 2 - 32, ty = rect.height / 2 - 32;
+  let dragging = false;
+  let offsetX = 0, offsetY = 0;
+  const k = 0.08, d = 0.78;
+  const BALL = 64;
+
+  function tick() {
+    if (!dragging) {
+      const ax = -k * (x - tx) - d * vx;
+      const ay = -k * (y - ty) - d * vy;
+      vx += ax; vy += ay;
+      x += vx; y += vy;
+    }
+    ball.style.transform = `translate(${x}px, ${y}px)`;
+    requestAnimationFrame(tick);
+  }
+
+  ball.style.transform = `translate(${x}px, ${y}px)`;
+  requestAnimationFrame(tick);
+
+  // 旋转 / 地址栏收起 / 分屏会改变容器尺寸，中心点需要重算
+  function recentre() {
+    const r = stage.getBoundingClientRect();
+    tx = r.width / 2 - BALL / 2;
+    ty = r.height / 2 - BALL / 2;
+    x = Math.min(Math.max(x, 0), Math.max(0, r.width - BALL));
+    y = Math.min(Math.max(y, 0), Math.max(0, r.height - BALL));
+    target.style.left = (tx + BALL / 2) + 'px';
+    target.style.top = (ty + BALL / 2) + 'px';
+  }
+  window.addEventListener('resize', recentre);
+  window.addEventListener('orientationchange', () => setTimeout(recentre, 300));
+
+  stage.addEventListener('pointermove', (e) => {
+    const r = stage.getBoundingClientRect();
+    tx = e.clientX - r.left - BALL / 2;
+    ty = e.clientY - r.top - BALL / 2;
+    target.style.left = (tx + BALL/2) + 'px';
+    target.style.top = (ty + BALL/2) + 'px';
+  });
+
+  ball.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    vx = 0; vy = 0;
+    ball.setPointerCapture(e.pointerId);
+  });
+  ball.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const r = stage.getBoundingClientRect();
+    x = e.clientX - r.left - BALL / 2;
+    y = e.clientY - r.top - BALL / 2;
+  });
+  ['pointerup', 'pointercancel'].forEach(evt =>
+    ball.addEventListener(evt, () => { dragging = false; })
+  );
+})();
+
+/* ================== 08 COUNTER ================== */
+(function() {
+  const display = document.getElementById('counterDisplay');
+  const stripIds = ['d0','d1','d2','d3','d4','d5','d6','d7'];
+  const strips = {};
+  stripIds.forEach(id => strips[id] = document.getElementById(id));
+
+  // Fill strips with 0-9
+  Object.values(strips).forEach(strip => {
+    for (let i = 0; i < 10; i++) {
+      const span = document.createElement('span');
+      span.textContent = i;
+      strip.appendChild(span);
+    }
+    strip.style.transform = 'translateY(0)';
+  });
+
+  const obj = { value: 0 };
+  let currentTween = null;
+
+  function setDigit(strip, n) {
+    gsap.to(strip, { yPercent: -n * 10, duration: 0.6, ease: 'expo.out' });
+  }
+
+  window.countTo = function(targetInt, targetDec) {
+    if (currentTween) currentTween.kill();
+    const start = obj.value;
+    const end = targetInt + targetDec / 100;
+    currentTween = gsap.to(obj, {
+      value: end,
+      duration: 2.2,
+      ease: 'expo.out',
+      onUpdate: () => {
+        const intPart = Math.floor(obj.value);
+        const decPart = Math.round((obj.value - intPart) * 100);
+        const intStr = intPart.toString().padStart(5, '0');
+        const decStr = decPart.toString().padStart(2, '0');
+        const full = intStr + decStr;
+        for (let i = 0; i < 8; i++) {
+          setDigit(strips[stripIds[i]], parseInt(full[i]));
+        }
+      }
+    });
+  };
+
+  // Initial value
+  countTo(12345, 67);
+})();
+
+/* ================== 09 3D TILT ================== */
+(function() {
+  const card = document.getElementById('tiltCard');
+  const shine = document.getElementById('tiltShine');
+
+  // pointermove 同时覆盖鼠标悬停与手指按住拖动两种输入
+  card.addEventListener('pointermove', (e) => {
+    const r = card.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const dx = (e.clientX - cx) / (r.width / 2);
+    const dy = (e.clientY - cy) / (r.height / 2);
+
+    card.style.transform = `
+      perspective(1200px)
+      rotateY(${dx * 14}deg)
+      rotateX(${-dy * 14}deg)
+      scale3d(1.02, 1.02, 1.02)
+    `;
+    shine.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100) + '%');
+    shine.style.setProperty('--my', ((e.clientY - r.top) / r.height * 100) + '%');
+  });
+
+  function reset() {
+    card.style.transform = 'perspective(1200px) rotateY(0) rotateX(0) scale3d(1, 1, 1)';
+  }
+  card.addEventListener('mouseleave', reset);
+  card.addEventListener('pointerup', (e) => { if (e.pointerType !== 'mouse') reset(); });
+  card.addEventListener('pointercancel', reset);
+})();
+
+/* ================== 10 GLASSMORPHISM ================== */
+(function() {
+  // Switches
+  document.querySelectorAll('.glass-switch').forEach(sw => {
+    sw.addEventListener('click', () => sw.classList.toggle('on'));
+  });
+
+  // Blur controls
+  const card = document.getElementById('glassCard');
+  const buttons = document.querySelectorAll('.glass-controls button');
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      buttons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const blur = btn.dataset.blur;
+      card.style.backdropFilter = `blur(${blur}px) saturate(180%)`;
+      card.style.webkitBackdropFilter = `blur(${blur}px) saturate(180%)`;
+    });
+  });
+})();
+
+/* ================== Page-load subtle animations ================== */
+window.addEventListener('load', () => {
+  gsap.from('.hero h1', { y: 40, opacity: 0, duration: 1.2, ease: 'expo.out' });
+  gsap.from('.hero .meta, .hero .lede, .hero .scroll-cue', {
+    y: 20, opacity: 0, duration: 0.8, stagger: 0.1, ease: 'expo.out', delay: 0.2
+  });
+});
+</script>
+
+</body>
+</html>

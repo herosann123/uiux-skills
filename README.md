@@ -12,6 +12,12 @@
 | **ui-component-skill** | 组件 | 8 态状态矩阵 + 表单 UX 铁律 + 页面四态流 |
 | **ui-verify-skill** | 验收 | 视口矩阵实测 + 可复制检测脚本 + 已知陷阱 + 四态结论 |
 
+## 🌐 在线演示(GitHub Pages)
+
+- **[▶ 基础 10 式 · 10-ui-interactions](https://herosann123.github.io/uiux-skills/10-ui-interactions.html)** — 视差/卡片堆叠/磁吸/弹性/翻牌等,全部可玩
+- [进阶 7 式 · advanced-ui-v2](https://herosann123.github.io/uiux-skills/advanced-ui-v2.html) · [前沿 7 式 · advanced-ui-v3](https://herosann123.github.io/uiux-skills/advanced-ui-v3.html)
+- [演示导航首页](https://herosann123.github.io/uiux-skills/)
+
 ---
 
 ## 安装

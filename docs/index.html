@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UIUX Skills · 在线演示</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..600&family=ZCOOL+XiaoWei&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 34px;
+    background: #0f0c13; color: #ede9f1; padding: 60px 24px;
+    font-family: 'Inter', 'PingFang SC', sans-serif; text-align: center;
+  }
+  .tag { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase; color: #53c7b8; }
+  h1 { font-family: 'Fraunces', 'ZCOOL XiaoWei', serif; font-weight: 400; font-size: clamp(40px, 8vw, 76px); letter-spacing: 0.04em; }
+  h1 em { font-style: normal; color: #e0679a; }
+  .sub { color: rgba(237,233,241,0.6); max-width: 520px; line-height: 1.9; font-size: 14px; }
+  .links { display: flex; flex-direction: column; gap: 14px; width: min(440px, 100%); }
+  a.demo {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 18px 24px; border: 1px solid rgba(237,233,241,0.14); border-radius: 10px;
+    color: #ede9f1; text-decoration: none; background: #171320;
+    transition: transform .3s cubic-bezier(.34,1.56,.64,1), border-color .25s ease;
+  }
+  a.demo:hover { transform: translateY(-3px); border-color: #e0679a; }
+  a.demo b { font-family: 'Fraunces', 'ZCOOL XiaoWei', serif; font-weight: 400; font-size: 18px; letter-spacing: .04em; }
+  a.demo span { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .18em; color: rgba(237,233,241,0.45); }
+  .repo { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: .14em; color: rgba(237,233,241,0.4); }
+  .repo a { color: #d9a862; text-decoration: none; }
+</style>
+</head>
+<body>
+  <div>
+    <div class="tag">UIUX Skills · Live Demos</div>
+    <h1>高级感,是<em>可以教</em>的。</h1>
+    <p class="sub">六个 UI 技能(总控路由 + 布局/视觉/动效/组件/验收)沉淀成 Agent Skills。下面是技能里 24 种交互模式的可玩演示。</p>
+  </div>
+  <div class="links">
+    <a class="demo" href="10-ui-interactions.html"><b>基础 10 式</b><span>PARALLAX · FLIP · SPRING…</span></a>
+    <a class="demo" href="advanced-ui-v2.html"><b>进阶 7 式</b><span>AURORA · PARTICLES · TYPewriter…</span></a>
+    <a class="demo" href="advanced-ui-v3.html"><b>前沿 7 式</b><span>CURSOR · GLITCH · CMD+K…</span></a>
+  </div>
+  <div class="repo"><a href="https://github.com/herosann123/uiux-skills">github.com/herosann123/uiux-skills</a></div>
+</body>
+</html>
