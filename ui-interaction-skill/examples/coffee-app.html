@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#14100d">
+<title>拾光咖啡 · 深夜也有一杯在等你</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>document.documentElement.classList.add('js');</script>
+<style>
+  :root {
+    --bg: #14100d;
+    --surface: #1d1712;
+    --card: #251c15;
+    --ink: #f3ead9;
+    --ink-72: rgba(243, 234, 217, 0.72);
+    --ink-52: rgba(243, 234, 217, 0.52);
+    --cream: #f6f1e7;
+    --acc: #d9a862;      /* 焦糖金 */
+    --acc-deep: #b8863f;
+    --terra: #c65b3c;    /* 赤陶 */
+    --terra-deep: #a5432a;
+    --line: rgba(243, 234, 217, 0.12);
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --serif: 'ZCOOL XiaoWei', 'STSong', serif;
+    --sans: 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    --mono: 'JetBrains Mono', 'SF Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: #080604;
+    display: flex; justify-content: center;
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button, a, input { touch-action: manipulation; -webkit-tap-highlight-color: transparent; font-family: var(--sans); }
+  :focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+
+  /* ===== App 容器(手机形态) ===== */
+  .app {
+    position: relative;
+    width: min(430px, 100vw);
+    height: 100vh; height: 100dvh;
+    background: var(--bg);
+    color: var(--ink);
+    overflow: hidden;
+  }
+  @media (min-width: 500px) {
+    .app { box-shadow: 0 0 0 1px rgba(243,234,217,0.08), 0 30px 90px rgba(0,0,0,0.8); }
+  }
+
+  /* ===== ⑥ 启动屏:SVG 描边 ===== */
+  .boot {
+    position: absolute; inset: 0; z-index: 500;
+    background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px;
+    transition: opacity 0.7s var(--ease), visibility 0.7s;
+  }
+  .boot.done { opacity: 0; visibility: hidden; pointer-events: none; }
+  .boot svg { width: 150px; height: 150px; }
+  .boot svg path {
+    fill: none; stroke: var(--acc); stroke-width: 2.5;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+  .js .boot svg path {
+    stroke-dasharray: 1; stroke-dashoffset: 1;
+    animation: draw 1.5s var(--ease) forwards;
+  }
+  .js .boot svg path.steam { animation-delay: 0.9s; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  .boot-name {
+    font-family: var(--serif); font-size: 34px; letter-spacing: 0.3em;
+    color: var(--ink); opacity: 0;
+  }
+  .js .boot.play .boot-name { animation: fadeIn 0.8s var(--ease) 1.2s forwards; }
+  .boot-slogan { font-family: var(--mono); font-size: 11px; letter-spacing: 0.3em; color: var(--ink-52); opacity: 0; }
+  .js .boot.play .boot-slogan { animation: fadeIn 0.8s var(--ease) 1.5s forwards; }
+  @keyframes fadeIn { to { opacity: 1; } }
+
+  /* ===== 页面骨架 ===== */
+  .screen {
+    position: absolute; inset: 0;
+    padding-bottom: 108px;
+    overflow-y: auto; overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    opacity: 0; visibility: hidden;
+    transition: opacity 0.35s var(--ease);
+  }
+  .screen.active { opacity: 1; visibility: visible; }
+
+  /* ===== 首页头部(① 视差) ===== */
+  .home-head {
+    position: relative;
+    padding: 64px 22px 26px;
+    overflow: hidden;
+    background: linear-gradient(180deg, #241a10 0%, var(--bg) 100%);
+  }
+  .head-glow {
+    position: absolute; inset: -40% -20%;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(217, 168, 98, 0.22), transparent 45%),
+      radial-gradient(circle at 85% 60%, rgba(198, 91, 60, 0.18), transparent 45%);
+    pointer-events: none;
+    will-change: transform;
+  }
+  .head-inner { position: relative; z-index: 2; }
+  .hi { font-family: var(--mono); font-size: 11px; letter-spacing: 0.26em; color: var(--acc); margin-bottom: 12px; }
+  .head-title { font-family: var(--serif); font-size: 34px; letter-spacing: 0.06em; line-height: 1.3; }
+  .head-title em { font-style: normal; color: var(--acc); }
+
+  /* ⑰ 打字机 */
+  .tw-line {
+    margin-top: 16px; min-height: 44px;
+    font-size: 14px; color: var(--ink-72); line-height: 1.8;
+  }
+  .tw-caret { display: inline-block; width: 2px; height: 1em; background: var(--acc); vertical-align: text-bottom; animation: blink 0.8s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* 搜索 pill(⑩ 玻璃) */
+  .search-pill {
+    margin: 20px 22px 0; width: calc(100% - 44px);
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px; border-radius: 14px;
+    background: rgba(243, 234, 217, 0.07);
+    border: 1px solid var(--line);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+    color: var(--ink-52); font-size: 14px; cursor: pointer;
+    transition: border-color 0.2s ease;
+  }
+  .search-pill:hover { border-color: var(--acc); }
+  .search-pill svg { flex-shrink: 0; }
+
+  /* ⑧ 滚动数字 */
+  .today {
+    margin: 22px 22px 0; padding: 18px 20px;
+    border: 1px solid var(--line); border-radius: 14px;
+    display: flex; align-items: baseline; gap: 14px;
+    background: var(--surface);
+  }
+  .today-num { font-family: var(--serif); font-size: 42px; font-weight: 400; color: var(--acc); font-variant-numeric: tabular-nums; line-height: 1; }
+  .today-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.22em; color: var(--ink-52); text-transform: uppercase; }
+
+  .section-h {
+    margin: 34px 22px 16px; display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .section-h h3 { font-family: var(--serif); font-size: 22px; font-weight: 400; letter-spacing: 0.06em; }
+  .section-h span { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; color: var(--ink-52); }
+
+  /* ===== 饮品卡片(② 渐入) ===== */
+  .drink-list { padding: 0 22px; display: flex; flex-direction: column; gap: 14px; }
+  .drink {
+    display: flex; gap: 16px; align-items: center;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 16px; padding: 14px;
+    cursor: pointer; width: 100%; text-align: left; color: var(--ink);
+    transition: transform 0.3s var(--spring), border-color 0.2s ease;
+  }
+  .drink:active { transform: scale(0.98); }
+  .d-art {
+    flex-shrink: 0; width: 84px; height: 84px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px;
+  }
+  .d-body { flex: 1; min-width: 0; }
+  .d-name { font-family: var(--serif); font-size: 19px; letter-spacing: 0.04em; }
+  .d-desc { font-size: 12px; color: var(--ink-52); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .d-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+  .d-price { font-family: var(--serif); font-size: 20px; color: var(--acc); }
+  .d-price::before { content: '¥ '; font-size: 12px; }
+  .d-add {
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 1.5px solid var(--acc); background: transparent; color: var(--acc);
+    font-size: 20px; cursor: pointer; line-height: 1;
+    transition: transform 0.3s var(--spring), background 0.2s ease, color 0.2s ease;
+  }
+  .d-add:active { transform: scale(0.85); background: var(--acc); color: var(--bg); }
+  .js .rv { opacity: 0; transform: translateY(26px); transition: opacity 0.65s var(--ease), transform 0.65s var(--ease); }
+  .js .rv.in { opacity: 1; transform: none; }
+
+  /* ===== ⑩ 玻璃 Tab 栏 ===== */
+  .tabbar {
+    position: absolute; left: 14px; right: 14px; bottom: 14px;
+    height: 74px; border-radius: 20px; z-index: 100;
+    display: flex;
+    background: rgba(29, 23, 18, 0.72);
+    -webkit-backdrop-filter: blur(18px) saturate(150%); backdrop-filter: blur(18px) saturate(150%);
+    border: 1px solid var(--line);
+    box-shadow: 0 18px 50px rgba(0,0,0,0.5);
+  }
+  .tab {
+    flex: 1; border: none; background: none; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    color: var(--ink-52); font-size: 11px; font-family: var(--sans);
+    transition: color 0.25s ease;
+  }
+  .tab svg { width: 24px; height: 24px; }
+  .tab.active { color: var(--acc); }
+  .tab .dot { width: 5px; height: 5px; border-radius: 50%; background: transparent; }
+  .tab.active .dot { background: var(--acc); }
+
+  /* ===== 骨架屏(component 四态) ===== */
+  .sk-list { padding: 24px 22px; display: flex; flex-direction: column; gap: 14px; }
+  .sk { display: flex; gap: 16px; align-items: center; }
+  .sk .b { border-radius: 12px; background: linear-gradient(90deg, var(--surface) 25%, var(--card) 50%, var(--surface) 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; }
+  .sk .b1 { width: 84px; height: 84px; flex-shrink: 0; }
+  .sk .col { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .sk .b2 { height: 18px; width: 60%; }
+  .sk .b3 { height: 12px; width: 85%; }
+  .sk .b4 { height: 12px; width: 40%; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+
+  /* ===== 空状态(component) ===== */
+  .empty { text-align: center; padding: 70px 40px; }
+  .empty .big { font-size: 52px; display: block; margin-bottom: 18px; }
+  .empty h4 { font-family: var(--serif); font-size: 22px; font-weight: 400; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .empty p { font-size: 13px; color: var(--ink-52); margin-bottom: 22px; }
+
+  /* ===== 通用按钮(⑬ 涟漪容器) ===== */
+  .btn {
+    position: relative; overflow: hidden;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 48px; padding: 13px 26px;
+    border-radius: 12px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--ink);
+    font-size: 14px; font-weight: 500; letter-spacing: 0.05em; cursor: pointer;
+    transition: background 0.2s ease, transform 0.25s var(--spring), opacity 0.2s ease;
+  }
+  .btn:hover { background: var(--card); }
+  .btn:active { transform: scale(0.96); }
+  .btn.primary { background: var(--terra); border-color: var(--terra); color: #fff; }
+  .btn.primary:hover { background: var(--terra-deep); }
+  .btn.loading { color: transparent !important; pointer-events: none; }
+  .btn.loading::after {
+    content: ''; position: absolute; inset: 0; margin: auto;
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.35); border-top-color: #fff;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .ripple { position: absolute; border-radius: 50%; background: rgba(255,255,255,0.4); pointer-events: none; }
+
+  /* ===== ⑮ FLIP 商品详情 ===== */
+  .detail-ov {
+    position: absolute; inset: 0; z-index: 200;
+    background: rgba(8, 6, 4, 0.7); display: none;
+  }
+  .detail-ov.open { display: block; }
+  .detail {
+    position: absolute; z-index: 201; display: none;
+    background: var(--surface); overflow: hidden;
+    flex-direction: column;
+  }
+  .detail.show { display: flex; }
+  .detail.animating { transition: transform 0.5s var(--ease), border-radius 0.5s var(--ease); }
+  .dt-art { flex: 0 0 46%; display: flex; align-items: center; justify-content: center; font-size: 90px; }
+  .dt-body { flex: 1; padding: 20px 24px 24px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .dt-name { font-family: var(--serif); font-size: 28px; letter-spacing: 0.04em; }
+  .dt-desc { font-size: 13px; color: var(--ink-72); line-height: 1.8; margin: 10px 0 14px; }
+  .dt-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .dt-tag { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; color: var(--acc); border: 1px solid rgba(217,168,98,0.35); padding: 5px 12px; border-radius: 100px; }
+  .dt-row { display: flex; justify-content: space-between; align-items: center; }
+  .dt-price { font-family: var(--serif); font-size: 30px; color: var(--acc); }
+  .dt-price::before { content: '¥ '; font-size: 14px; }
+  .dt-close {
+    position: absolute; top: 12px; right: 12px; width: 40px; height: 40px;
+    border-radius: 50%; background: rgba(20,16,13,0.55); border: 1px solid var(--line);
+    color: #fff; font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  }
+
+  /* ===== ⑦ 步进器 ===== */
+  .stepper { display: flex; align-items: center; gap: 14px; }
+  .step-btn {
+    width: 38px; height: 38px; border-radius: 50%;
+    border: 1.5px solid var(--line); background: var(--surface);
+    color: var(--ink); font-size: 17px; cursor: pointer;
+    transition: transform 0.3s var(--spring), background 0.2s ease;
+    user-select: none; -webkit-user-select: none;
+  }
+  .step-btn:active { transform: scale(0.85); background: var(--card); }
+  .step-num { font-family: var(--serif); font-size: 26px; min-width: 34px; text-align: center; font-variant-numeric: tabular-nums; }
+  .step-num.pop { animation: pop 0.32s var(--spring); }
+  @keyframes pop { 40% { transform: scale(1.25); } }
+
+  /* ===== 点单页 ===== */
+  .cart-list { padding: 24px 22px; display: flex; flex-direction: column; gap: 14px; }
+  .cart-item {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 14px;
+  }
+  .ci-art { width: 54px; height: 54px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0; }
+  .ci-body { flex: 1; min-width: 0; }
+  .ci-name { font-size: 15px; font-weight: 500; }
+  .ci-price { font-size: 12px; color: var(--ink-52); margin-top: 2px; }
+  .cart-foot { padding: 0 22px 20px; }
+  .total-row { display: flex; justify-content: space-between; align-items: baseline; padding: 16px 2px; }
+  .total-row span { font-size: 13px; color: var(--ink-52); }
+  .total-row b { font-family: var(--serif); font-size: 30px; font-weight: 400; color: var(--acc); font-variant-numeric: tabular-nums; }
+  .total-row b::before { content: '¥ '; font-size: 14px; }
+  .btn.block { width: 100%; font-size: 15px; }
+
+  /* ===== 我的页 ===== */
+  .profile {
+    margin: 64px 22px 0; padding: 26px 24px;
+    background: linear-gradient(140deg, #2a1f12, #1d1712 70%);
+    border: 1px solid var(--line); border-radius: 18px;
+    display: flex; align-items: center; gap: 18px;
+  }
+  .avatar {
+    width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--acc), var(--terra));
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--serif); font-size: 26px; color: var(--bg);
+  }
+  .profile h4 { font-family: var(--serif); font-size: 22px; font-weight: 400; letter-spacing: 0.06em; }
+  .profile p { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; color: var(--ink-52); margin-top: 5px; }
+  .set-group { margin: 20px 22px 0; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .set-row { display: flex; justify-content: space-between; align-items: center; padding: 17px 20px; background: var(--surface); }
+  .set-row + .set-row { border-top: 1px solid var(--line); }
+  .set-row span { font-size: 14px; }
+  .set-row small { display: block; font-size: 11px; color: var(--ink-52); margin-top: 2px; }
+
+  /* ⑩ 玻璃开关 */
+  .switch {
+    width: 52px; height: 30px; border-radius: 100px; flex-shrink: 0;
+    background: var(--card); border: 1px solid var(--line);
+    position: relative; cursor: pointer;
+    transition: background 0.25s ease, border-color 0.25s ease;
+  }
+  .switch::after {
+    content: ''; position: absolute; top: 3px; left: 3px;
+    width: 22px; height: 22px; border-radius: 50%; background: var(--ink-52);
+    transition: transform 0.3s var(--spring), background 0.25s ease;
+  }
+  .switch.on { background: rgba(217, 168, 98, 0.25); border-color: var(--acc); }
+  .switch.on::after { transform: translateX(22px); background: var(--acc); }
+
+  /* ===== 搜索浮层(⑳ 命令栏式) ===== */
+  .search-ov {
+    position: absolute; inset: 0; z-index: 300;
+    background: rgba(8, 6, 4, 0.6); display: none;
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  }
+  .search-ov.open { display: block; }
+  .search-panel {
+    position: absolute; top: 60px; left: 16px; right: 16px;
+    background: var(--surface); border: 1px solid var(--border, var(--line));
+    border-radius: 16px; overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+    animation: panelIn 0.25s var(--spring);
+  }
+  @keyframes panelIn { from { opacity: 0; transform: translateY(-14px) scale(0.98); } }
+  .sp-input-row { display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+  .sp-input { flex: 1; border: none; outline: none; background: none; color: var(--ink); font-size: 16px; }
+  .sp-list { max-height: 320px; overflow-y: auto; padding: 8px; }
+  .sp-item { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 10px; cursor: pointer; }
+  .sp-item:hover, .sp-item.sel { background: rgba(217,168,98,0.1); }
+  .sp-item .e { font-size: 22px; }
+  .sp-item .t { font-size: 14px; }
+  .sp-item .t small { display: block; color: var(--ink-52); font-size: 11px; margin-top: 1px; }
+  .sp-empty { padding: 34px 20px; text-align: center; color: var(--ink-52); font-size: 13px; }
+
+  /* ===== Toast ===== */
+  .toast {
+    position: absolute; left: 50%; bottom: 110px; z-index: 400;
+    transform: translate(-50%, 10px); opacity: 0;
+    background: rgba(243, 234, 217, 0.95); color: #1d1712;
+    border-radius: 12px; padding: 12px 20px; font-size: 13px; font-weight: 500;
+    transition: opacity 0.25s var(--ease), transform 0.25s var(--ease);
+    pointer-events: none; max-width: 85%; text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ===== 成功视图 ===== */
+  .success-view { text-align: center; padding: 30px 20px 10px; }
+  .success-view .big { font-size: 54px; display: block; margin-bottom: 14px; }
+  .success-view h3 { font-family: var(--serif); font-size: 26px; font-weight: 400; letter-spacing: 0.08em; margin-bottom: 10px; }
+  .success-view p { font-size: 13px; color: var(--ink-72); }
+
+  #confettiCanvas { position: absolute; inset: 0; z-index: 350; pointer-events: none; display: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .js .rv { opacity: 1; transform: none; }
+    .boot svg path { stroke-dashoffset: 0; }
+    .boot-name, .boot-slogan { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- ⑥ 启动屏 -->
+  <div class="boot play" id="boot" aria-hidden="true">
+    <svg viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M28 38 L32 82 Q33 90 42 90 L62 90 Q71 90 72 82 L76 38 Z"/>
+      <path d="M24 38 L80 38" />
+      <path class="steam" d="M42 26 Q46 18 42 10"/>
+      <path class="steam" d="M54 26 Q58 18 54 10"/>
+      <path class="steam" d="M64 28 Q67 22 64 16"/>
+    </svg>
+    <div class="boot-name">拾光咖啡</div>
+    <div class="boot-slogan">SHIGUANG COFFEE</div>
+  </div>
+
+  <!-- ═══════ 首页 ═══════ -->
+  <section class="screen active" id="screen-home">
+    <div class="home-head" id="homeHead">
+      <div class="head-glow" id="headGlow"></div>
+      <div class="head-inner">
+        <div class="hi">OPEN · 22:00 - 04:00</div>
+        <div class="head-title">晚上好,<br><em>深夜也有一杯在等你</em></div>
+        <div class="tw-line"><span id="twText"></span><span class="tw-caret"></span></div>
+      </div>
+    </div>
+
+    <div class="search-pill" id="searchPill" role="button" tabindex="0">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+      搜索饮品 / 风味 / 咖啡因…
+    </div>
+
+    <div class="today">
+      <span class="today-num" id="todayNum">0</span>
+      <span class="today-label">Cups tonight<br>今日已出品</span>
+    </div>
+
+    <div class="section-h"><h3>今夜推荐</h3><span>TONIGHT</span></div>
+    <div class="drink-list" id="drinkList"></div>
+    <div style="height: 30px;"></div>
+  </section>
+
+  <!-- ═══════ 点单 ═══════ -->
+  <section class="screen" id="screen-order">
+    <div style="padding: 68px 22px 10px;">
+      <div class="hi">CART · 购物袋</div>
+      <div class="head-title" style="font-size: 30px;">准备下单</div>
+    </div>
+    <div id="orderBody"></div>
+  </section>
+
+  <!-- ═══════ 我的 ═══════ -->
+  <section class="screen" id="screen-mine">
+    <div class="profile">
+      <div class="avatar">拾</div>
+      <div>
+        <h4>深夜会员 · Lv.7</h4>
+        <p>MIDNIGHT MEMBER</p>
+      </div>
+    </div>
+    <div class="set-group">
+      <div class="set-row">
+        <span>订单提醒<small>出杯完成时轻拍提醒</small></span>
+        <div class="switch on" id="sw1" role="switch" aria-checked="true" tabindex="0"></div>
+      </div>
+      <div class="set-row">
+        <span>触感反馈<small>按键与步进器轻微震动</small></span>
+        <div class="switch on" id="sw2" role="switch" aria-checked="true" tabindex="0"></div>
+      </div>
+      <div class="set-row">
+        <span>深夜模式<small>22:00 后自动调暗界面</small></span>
+        <div class="switch on" id="sw3" role="switch" aria-checked="true" tabindex="0"></div>
+      </div>
+    </div>
+    <div class="set-group">
+      <div class="set-row">
+        <span>关于拾光<small>v1.0 · 用 uiux-skills 打造</small></span>
+        <span style="color:var(--ink-52);">›</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 玻璃 Tab 栏 ═══════ -->
+  <nav class="tabbar" id="tabbar">
+    <button class="tab active" data-tab="home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11 L12 3 L21 11"/><path d="M6 10 V20 H18 V10"/></svg>
+      首页<span class="dot"></span>
+    </button>
+    <button class="tab" data-tab="order">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 7 H18 L17 21 H7 Z"/><path d="M9 7 Q9 3 12 3 Q15 3 15 7"/></svg>
+      点单<span class="dot"></span>
+    </button>
+    <button class="tab" data-tab="mine">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21 Q4 13 12 13 Q20 13 20 21"/></svg>
+      我的<span class="dot"></span>
+    </button>
+  </nav>
+
+  <!-- ═══════ 搜索浮层 ═══════ -->
+  <div class="search-ov" id="searchOv">
+    <div class="search-panel">
+      <div class="sp-input-row">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+        <input class="sp-input" id="searchInput" type="text" placeholder="搜索饮品,试试「拿铁」" autocomplete="off">
+      </div>
+      <div class="sp-list" id="spList"></div>
+    </div>
+  </div>
+
+  <!-- ═══════ FLIP 商品详情 ═══════ -->
+  <div class="detail-ov" id="detailOv"></div>
+  <div class="detail" id="detail" role="dialog" aria-modal="true">
+    <div class="dt-art" id="dtArt">☕</div>
+    <button class="dt-close" id="dtClose" aria-label="关闭">×</button>
+    <div class="dt-body">
+      <div class="dt-name" id="dtName"></div>
+      <p class="dt-desc" id="dtDesc"></p>
+      <div class="dt-tags" id="dtTags"></div>
+      <div class="dt-row">
+        <span class="dt-price" id="dtPrice"></span>
+        <div class="stepper">
+          <button class="step-btn" id="dMinus" aria-label="减少">−</button>
+          <span class="step-num" id="dNum">1</span>
+          <button class="step-btn" id="dPlus" aria-label="增加">＋</button>
+        </div>
+      </div>
+      <button class="btn primary block" id="dtAdd" style="margin-top:18px;">加入购物袋</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <canvas id="confettiCanvas"></canvas>
+</div>
+
+<script>
+/* ═══════════ 数据 ═══════════ */
+var DRINKS = [
+  { id: 0, emoji: '☕', name: '手冲耶加雪菲', desc: '茉莉花香 · 柑橘尾韵', price: 28, tags: ['手冲', '浅烘', '花果香'],
+    descLong: '埃塞俄比亚耶加雪菲,水洗处理。入口是明显的茉莉花香,中段柑橘酸质明亮,尾韵带蜂蜜甜。建议不加糖,先喝一口原味。', art: 'linear-gradient(135deg, #3a2a18, #6b4a23)' },
+  { id: 1, emoji: '🍵', name: '桂花拿铁', desc: '自酿桂花糖浆 · 秋季限定', price: 32, tags: ['拿铁', '桂花', '秋季限定'],
+    descLong: '主人自酿的桂花糖浆,配 60ml 双份浓缩与冰博克厚乳。桂花香从鼻尖到回甘,是这个季节最温柔的一杯。', art: 'linear-gradient(135deg, #4a3626, #a5763c)' },
+  { id: 2, emoji: '🥛', name: '脏脏咖啡', desc: '冰博克厚乳 · 分层prettiness', price: 36, tags: ['Dirty', '冰博克', '微苦'],
+    descLong: '冰博克厚乳打底,滚烫浓缩直接浇上去。前口是热的焦香,后段是冰的丝滑——趁热大口喝,别搅拌。', art: 'linear-gradient(135deg, #241c15, #7a5c3a)' },
+  { id: 3, emoji: '🍊', name: '柚子冷萃', desc: '冷萃 12 小时 · 柚子清苦', price: 30, tags: ['冷萃', '柚子', '清爽'],
+    descLong: '中深烘冷萃十二小时,加入自渍柚子片。清苦回甘,是深夜里最不容易失眠的一杯。', art: 'linear-gradient(135deg, #1d2b26, #3f6b5c)' },
+];
+var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+var $ = function (s) { return document.querySelector(s); };
+var pad2 = function (n) { return (n < 10 ? '0' : '') + n; };
+
+/* ═══════════ ⑥ 启动屏 ═══════════ */
+(function () {
+  var boot = $('#boot');
+  if (reduced) {
+    boot.classList.add('done');
+    return;
+  }
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      boot.classList.add('play');
+    });
+  });
+  setTimeout(function () { boot.classList.add('done'); }, 2600);
+})();
+
+/* ═══════════ ⑰ 打字机 ═══════════ */
+(function () {
+  var el = $('#twText');
+  var text = '店主推荐:今晚的手冲耶加雪菲,茉莉花香特别明显。';
+  var i = 0;
+  if (reduced) { el.textContent = text; return; }
+  setTimeout(function tick() {
+    if (i >= text.length) return;
+    el.textContent += text[i++];
+    var d = 34 + Math.random() * 46;
+    if (',。:'.indexOf(text[i - 1]) >= 0) d = 260;
+    setTimeout(tick, d);
+  }, 2400);
+})();
+
+/* ═══════════ 渲染饮品卡片 ═══════════ */
+(function () {
+  var list = $('#drinkList');
+  list.innerHTML = DRINKS.map(function (d, i) {
+    return '<button class="drink rv" data-id="' + d.id + '" style="transition-delay:' + (i % 4) * 70 + 'ms">' +
+      '<span class="d-art" style="background:' + d.art + '">' + d.emoji + '</span>' +
+      '<span class="d-body"><span class="d-name">' + d.name + '</span>' +
+      '<span class="d-desc" style="display:block;">' + d.desc + '</span>' +
+      '<span class="d-meta"><span class="d-price">' + d.price + '</span>' +
+      '<span class="d-add" data-add="' + d.id + '" role="button" aria-label="加入购物袋">+</span></span></span></button>';
+  }).join('');
+})();
+
+/* ═══════════ ⑧ 数字滚动 + ② 可重入渐入 + ① 视差 ═══════════ */
+(function () {
+  var home = $('#screen-home');
+  var num = $('#todayNum');
+  var counted = false;
+  function countUp() {
+    if (counted) return;
+    counted = true;
+    var target = 128, t0 = performance.now();
+    if (reduced) { num.textContent = target; return; }
+    (function step(t) {
+      var p = Math.min(1, (t - t0) / 1100);
+      var e = 1 - Math.pow(2, -10 * p);
+      num.textContent = Math.round(target * e);
+      if (p < 1) requestAnimationFrame(step);
+    })(t0);
+  }
+  if ('IntersectionObserver' in window && !reduced) {
+    new IntersectionObserver(function (entries, obs) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) { countUp(); obs.disconnect(); }
+      });
+    }, { threshold: 0.4 }).observe(num);
+  } else { countUp(); }
+
+  /* 可重入渐入(离开视口下方即重置) */
+  var rvs = document.querySelectorAll('.rv');
+  if ('IntersectionObserver' in window && !reduced) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) en.target.classList.add('in');
+        else if (en.boundingClientRect.top > 0) en.target.classList.remove('in');
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -5% 0px' });
+    rvs.forEach(function (el) { io.observe(el); });
+  } else {
+    rvs.forEach(function (el) { el.classList.add('in'); });
+  }
+
+  /* ① 头部视差 */
+  if (reduced) return;
+  var ticking = false, glow = $('#headGlow'), head = $('#homeHead'), inner = $('.head-inner');
+  home.addEventListener('scroll', function () {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function () {
+      ticking = false;
+      var y = home.scrollTop;
+      if (y < 600) {
+        head.style.transform = 'translateY(' + (y * 0.35).toFixed(1) + 'px)';
+        inner.style.opacity = String(Math.max(0, 1 - y / 420));
+      }
+    });
+  }, { passive: true });
+})();
+
+/* ═══════════ Tab 切换 + 骨架屏 ═══════════ */
+(function () {
+  var current = 'home';
+  var skeletonShown = {};
+  window.showTab = function (name) {
+    if (name === current) return;
+    current = name;
+    document.querySelectorAll('.tab').forEach(function (t) {
+      t.classList.toggle('active', t.dataset.tab === name);
+    });
+    ['home', 'order', 'mine'].forEach(function (n) {
+      document.getElementById('screen-' + n).classList.toggle('active', n === name);
+    });
+    if (name === 'order' && !skeletonShown.order) {
+      skeletonShown.order = true;
+      var body = $('#orderBody');
+      body.innerHTML = '<div class="sk-list">' +
+        '<div class="sk"><div class="b b1"></div><div class="col"><div class="b b2"></div><div class="b b3"></div><div class="b b4"></div></div></div>' +
+        '<div class="sk"><div class="b b1"></div><div class="col"><div class="b b2"></div><div class="b b3"></div><div class="b b4"></div></div></div></div>';
+      setTimeout(renderCart, 750);
+    } else if (name === 'order') {
+      renderCart();
+    }
+  };
+  document.querySelectorAll('.tab').forEach(function (t) {
+    t.addEventListener('click', function () { showTab(t.dataset.tab); });
+  });
+})();
+
+/* ═══════════ 购物车状态 ═══════════ */
+var cart = [];
+
+function renderCart() {
+  var body = $('#orderBody');
+  if (!cart.length) {
+    body.innerHTML = '<div class="empty">' +
+      '<span class="big">🌙</span><h4>购物袋还是空的</h4>' +
+      '<p>去首页挑一杯,今晚的咖啡因额度还没用完。</p>' +
+      '<button class="btn" id="goBrowse">去逛逛 →</button></div>';
+    var go = document.getElementById('goBrowse');
+    if (go) go.addEventListener('click', function () { showTab('home'); });
+    return;
+  }
+  var total = 0;
+  var rows = cart.map(function (c, i) {
+    total += c.price * c.qty;
+    return '<div class="cart-item">' +
+      '<span class="ci-art" style="background:' + c.art + '">' + c.emoji + '</span>' +
+      '<div class="ci-body"><div class="ci-name">' + c.name + '</div>' +
+      '<div class="ci-price">¥ ' + c.price + ' × ' + c.qty + '</div></div>' +
+      '<div class="stepper"><button class="step-btn" data-dec="' + i + '" aria-label="减少">−</button>' +
+      '<span class="step-num">' + c.qty + '</span>' +
+      '<button class="step-btn" data-inc="' + i + '" aria-label="增加">＋</button></div></div>';
+  }).join('');
+  body.innerHTML = '<div class="cart-list">' + rows + '</div>' +
+    '<div class="cart-foot"><div class="total-row"><span>合计 · 含一杯的故事</span><b>' + total + '</b></div>' +
+    '<button class="btn primary block" id="submitOrder">提交订单 · 10 分钟后可取</button></div>';
+
+  body.querySelectorAll('[data-inc]').forEach(function (b) {
+    b.addEventListener('click', function () { cart[+b.dataset.inc].qty++; renderCart(); });
+  });
+  body.querySelectorAll('[data-dec]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var i = +b.dataset.dec;
+      cart[i].qty--;
+      if (cart[i].qty <= 0) cart.splice(i, 1);
+      renderCart();
+    });
+  });
+  var sub = document.getElementById('submitOrder');
+  if (sub) sub.addEventListener('click', function () {
+    sub.classList.add('loading');
+    var anchorRect = sub.getBoundingClientRect();
+    setTimeout(function () {
+      sub.classList.remove('loading');
+      body.innerHTML = '<div class="success-view">' +
+        '<span class="big">☕</span><h3>接单!</h3>' +
+        '<p>10 分钟后可取,出杯时会轻拍提醒你。</p><p>取餐号 <b style="font-family:var(--mono);color:var(--acc);">A-' + pad2(Math.floor(Math.random() * 40) + 10) + '</b></p></div>';
+      toast('订单已送达吧台 ✓');
+      fireConfetti(anchorRect);
+    }, 900);
+  });
+}
+
+/* ═══════════ Toast ═══════════ */
+var toastTimer;
+function toast(msg) {
+  var t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2200);
+}
+
+/* ═══════════ ⑬ 涟漪 ═══════════ */
+document.addEventListener('pointerdown', function (e) {
+  var btn = e.target.closest('.btn');
+  if (!btn || reduced) return;
+  var r = btn.getBoundingClientRect();
+  var size = Math.max(r.width, r.height) * 2;
+  var rip = document.createElement('span');
+  rip.className = 'ripple';
+  rip.style.width = rip.style.height = size + 'px';
+  rip.style.left = (e.clientX - r.left - size / 2) + 'px';
+  rip.style.top = (e.clientY - r.top - size / 2) + 'px';
+  btn.appendChild(rip);
+  if (rip.animate) {
+    rip.animate([{ transform: 'scale(0.1)', opacity: 0.7 }, { transform: 'scale(1)', opacity: 0 }],
+      { duration: 550, easing: 'ease-out' }).onfinish = function () { rip.remove(); };
+  } else { setTimeout(function () { rip.remove(); }, 600); }
+});
+
+/* ═══════════ ⑮ FLIP 详情 ═══════════ */
+(function () {
+  var ov = $('#detailOv'), detail = $('#detail');
+  var app = $('#app');
+  var open = false, animating = false, originCard = null;
+  var qty = 1, drink = null;
+
+  function openDetail(id, cardEl) {
+    if (open || animating) return;
+    drink = DRINKS[+id];
+    originCard = cardEl;
+    qty = 1;
+    $('#dtArt').textContent = drink.emoji;
+    $('#dtArt').style.background = drink.art;
+    $('#dtName').textContent = drink.name;
+    $('#dtDesc').textContent = drink.descLong;
+    $('#dtTags').innerHTML = drink.tags.map(function (t) { return '<span class="dt-tag">' + t + '</span>'; }).join('');
+    $('#dtPrice').textContent = drink.price;
+    $('#dNum').textContent = '1';
+    $('#dtAdd').textContent = '加入购物袋';
+
+    var first = cardEl.getBoundingClientRect();
+    var appR = app.getBoundingClientRect();
+    var rel = { left: first.left - appR.left, top: first.top - appR.top, width: first.width, height: first.height };
+    open = true; animating = true;
+    detail.classList.add('show');
+    detail.style.transition = 'none';
+    detail.style.left = '0'; detail.style.top = '0';
+    detail.style.width = appR.width + 'px';
+    detail.style.height = appR.height + 'px';
+    detail.style.borderRadius = '0px';
+    detail.style.transformOrigin = 'center center';
+    var sx = rel.width / appR.width, sy = rel.height / appR.height;
+    var tx = rel.left + rel.width / 2 - appR.width / 2;
+    var ty = rel.top + rel.height / 2 - appR.height / 2;
+    detail.style.transform = 'translate(' + tx.toFixed(1) + 'px,' + ty.toFixed(1) + 'px) scale(' + sx.toFixed(4) + ',' + sy.toFixed(4) + ')';
+    ov.classList.add('open');
+    if (!reduced) {
+      requestAnimationFrame(function () {
+        detail.classList.add('animating');
+        detail.style.transform = 'translate(0,0) scale(1,1)';
+        setTimeout(function () { detail.classList.remove('animating'); detail.style.transform = ''; animating = false; }, 520);
+      });
+    } else {
+      detail.style.transform = '';
+      animating = false;
+    }
+  }
+
+  function closeDetail() {
+    if (!open || animating) return;
+    animating = true;
+    var card = originCard || document.querySelector('.drink');
+    var last = card.getBoundingClientRect();
+    var appR = app.getBoundingClientRect();
+    detail.classList.add('animating');
+    detail.style.transform = 'translate(' + (last.left - appR.left + last.width / 2 - appR.width / 2).toFixed(1) + 'px,' +
+      (last.top - appR.top + last.height / 2 - appR.height / 2).toFixed(1) + 'px) scale(' +
+      (last.width / appR.width).toFixed(4) + ',' + (last.height / appR.height).toFixed(4) + ')';
+    ov.classList.remove('open');
+    card.style.visibility = '';
+    setTimeout(function () {
+      detail.classList.remove('animating', 'show');
+      detail.style.transition = ''; detail.style.transform = '';
+      detail.style.left = detail.style.top = '';
+      detail.style.width = detail.style.height = '';
+      detail.style.borderRadius = '';
+      animating = false; open = false;
+    }, 520);
+  }
+
+  $('#drinkList').addEventListener('click', function (e) {
+    var add = e.target.closest('[data-add]');
+    if (add) {
+      e.stopPropagation();
+      var d = DRINKS[+add.dataset.add];
+      var ex = cart.find(function (c) { return c.id === d.id; });
+      if (ex) ex.qty++; else cart.push({ id: d.id, name: d.name, price: d.price, qty: 1, emoji: d.emoji, art: d.art });
+      toast(d.name + ' 已入袋 🛍');
+      return;
+    }
+    var card = e.target.closest('.drink');
+    if (card) openDetail(card.dataset.id, card);
+  });
+  $('#dtClose').addEventListener('click', closeDetail);
+  ov.addEventListener('click', closeDetail);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && open) closeDetail(); });
+  $('#dPlus').addEventListener('click', function () {
+    qty = Math.min(5, qty + 1);
+    $('#dNum').textContent = qty;
+    if (!reduced) { $('#dNum').classList.remove('pop'); void $('#dNum').offsetWidth; $('#dNum').classList.add('pop'); }
+  });
+  $('#dMinus').addEventListener('click', function () {
+    qty = Math.max(1, qty - 1);
+    $('#dNum').textContent = qty;
+    if (!reduced) { $('#dNum').classList.remove('pop'); void $('#dNum').offsetWidth; $('#dNum').classList.add('pop'); }
+  });
+  $('#dtAdd').addEventListener('click', function () {
+    var ex = cart.find(function (c) { return c.id === drink.id; });
+    if (ex) ex.qty += qty; else cart.push({ id: drink.id, name: drink.name, price: drink.price, qty: qty, emoji: drink.emoji, art: drink.art });
+    toast(drink.name + ' × ' + qty + ' 已入袋 🛍');
+    closeDetail();
+  });
+})();
+
+/* ═══════════ 搜索浮层 ═══════════ */
+(function () {
+  var ov = $('#searchOv'), input = $('#searchInput'), list = $('#spList');
+  function render(q) {
+    q = q.trim().toLowerCase();
+    var hits = DRINKS.filter(function (d) {
+      return !q || (d.name + d.desc + d.tags.join()).toLowerCase().indexOf(q) >= 0;
+    });
+    if (!hits.length) {
+      list.innerHTML = '<div class="sp-empty">没有找到「' + q + '」<br>试试「拿铁」「冷萃」或「桂花」</div>';
+      return;
+    }
+    list.innerHTML = hits.map(function (d) {
+      return '<div class="sp-item" data-id="' + d.id + '"><span class="e">' + d.emoji + '</span>' +
+        '<span class="t">' + d.name + '<small>' + d.desc + ' · ¥ ' + d.price + '</small></span></div>';
+    }).join('');
+  }
+  function openSearch() {
+    ov.classList.add('open');
+    input.value = '';
+    render('');
+    setTimeout(function () { input.focus(); }, 80);
+  }
+  function closeSearch() { ov.classList.remove('open'); }
+  $('#searchPill').addEventListener('click', openSearch);
+  $('#searchPill').addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') openSearch(); });
+  ov.addEventListener('click', function (e) { if (e.target === ov) closeSearch(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && ov.classList.contains('open')) closeSearch(); });
+  input.addEventListener('input', function () { render(input.value); });
+  list.addEventListener('click', function (e) {
+    var item = e.target.closest('.sp-item');
+    if (!item) return;
+    var d = DRINKS[+item.dataset.id];
+    var ex = cart.find(function (c) { return c.id === d.id; });
+    if (ex) ex.qty++; else cart.push({ id: d.id, name: d.name, price: d.price, qty: 1, emoji: d.emoji, art: d.art });
+    closeSearch();
+    toast(d.name + ' 已入袋 🛍');
+  });
+})();
+
+/* ═══════════ 玻璃开关 ═══════════ */
+document.querySelectorAll('.switch').forEach(function (sw) {
+  function toggle() {
+    sw.classList.toggle('on');
+    sw.setAttribute('aria-checked', sw.classList.contains('on'));
+    toast(sw.classList.contains('on') ? '已开启' : '已关闭');
+  }
+  sw.addEventListener('click', toggle);
+  sw.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+});
+
+/* ═══════════ 彩带 ═══════════ */
+function fireConfetti(anchor) {
+  if (reduced) return;
+  var canvas = document.getElementById('confettiCanvas');
+  var app = document.getElementById('app');
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = app.clientWidth * dpr; canvas.height = app.clientHeight * dpr;
+  canvas.style.display = 'block';
+  var ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  var r = anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : anchor, aR = app.getBoundingClientRect();
+  var ox = r.left - aR.left + r.width / 2, oy = r.top - aR.top;
+  var colors = ['#d9a862', '#c65b3c', '#f3ead9', '#b8863f'];
+  var parts = [];
+  for (var i = 0; i < 110; i++) {
+    var ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.4;
+    var sp = 6 + Math.random() * 7;
+    parts.push({ x: ox, y: oy, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
+      w: 5 + Math.random() * 5, h: 7 + Math.random() * 6,
+      rot: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.3,
+      color: colors[i % colors.length], life: 120 + Math.random() * 40 });
+  }
+  (function frame() {
+    ctx.clearRect(0, 0, app.clientWidth, app.clientHeight);
+    var alive = false;
+    parts.forEach(function (p) {
+      if (p.life <= 0) return;
+      alive = true; p.life--;
+      p.vy += 0.16; p.vx *= 0.99; p.vy *= 0.995;
+      p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      ctx.globalAlpha = Math.min(1, p.life / 30);
+      ctx.fillStyle = p.color; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    });
+    if (alive) requestAnimationFrame(frame);
+    else canvas.style.display = 'none';
+  })();
+}
+</script>
+
+</body>
+</html>

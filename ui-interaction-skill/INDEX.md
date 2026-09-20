@@ -43,6 +43,7 @@
 | ㉒ | 滚动驱动数字 Scroll# | ScrollTrigger.progress → lerp 数字 | 数据叙事、产品参数 |
 | ㉓ | 命令栏 Cmd+K | 快捷键唤起 + 模糊搜索 + 键盘导航 | 工具型产品、Power User |
 | ㉔ | Blob Morph 液态形变 | SVG `<path>` `d` 属性插值 | Stripe 风、空状态、Loading |
+| ㉕ | Folding Drawer 千层酥 | 同位多卡 + 阶梯偏移 + 顶卡抽拉 | 色卡、设计系统、配色面板 |
 
 ---
 
@@ -57,6 +58,8 @@
 | 数字徽章 | ⑧ 数字翻牌 / ㉒ 滚动驱动 |
 | Loading 占位 | ⑥ SVG / ⑦ 弹性 / ㉔ Blob |
 | 卡片 → 详情 | ⑮ FLIP / ⑯ View Transitions |
+| 色卡 / 配色面板 | ㉕ Folding Drawer |
+| 有限集合顺序浏览（≤8 项） | ㉕ Folding Drawer |
 | 主题切换 / SPA | ⑯ View Transitions |
 | AI 对话气泡 | ⑰ 流式打字机 |
 | 高端落地页品牌感 | ⑱ 自定义光标 + ⑳ 噪点 + ㉑ Glitch |

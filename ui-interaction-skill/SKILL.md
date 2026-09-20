@@ -156,6 +156,8 @@ Pointer  光标     ⑨ 3D 倾斜                  ⑩ 玻璃
 | **特性卡片网格** | ⑨ 3D 倾斜（hover） | rotate ±8~12°；强度 0.3 | ④ 磁吸（整卡） | 移动端降级为普通 hover |
 | **卡片 → 详情页** | ⑮ FLIP 共享元素 | duration 350~500ms | ⑯ View Transitions | 共享元素必须有稳定 key/id；列表 → 全屏 |
 | **可滑动 Feed 卡** | ③ 卡片堆叠 | 阈值 80~120px | 普通 swipe-to-dismiss | 屏幕只允许 1 张可拖 |
+| **色卡 / 配色面板浏览** | ㉕ Folding Drawer | 偏移 20/14、scale 0.94→0.70 | ⑨ 3D 倾斜（hover） | 书签从卡片延伸，激活 = 暗 / 未激活 = 亮 |
+| **有限集合顺序浏览（≤8 项）** | ㉕ Folding Drawer | 5 层阶梯偏移、wheel 锁 200ms | ⑲ 水平叙事 | 不要旋转/折叠 — 抽拉感更高级 |
 | **数字展示 / 统计** | ⑧ 数字翻牌 | ease: expo.out | ① 视差（数字墙） | 单次进入动画，不要循环 |
 | **图文混合段落** | ② 滚动触发（淡入） | 阈值 0.2；y: 30 | 不动 | 不要用视差，会影响阅读 |
 | **轮播 / Banner** | ⑨ 3D 倾斜（active 项） | rotate ±6° | ⑤ 文字揭示 | 一次只强调一张 |
@@ -231,6 +233,7 @@ Pointer  光标     ⑨ 3D 倾斜                  ⑩ 玻璃
 | ㉒ | **滚动驱动数字** | ScrollTrigger.progress 0~1 → lerp 数字 0~N | duration 不限，lerp 0.15 | ⭐ |
 | ㉓ | **命令栏 Cmd+K** | 全局快捷键唤起 + 模糊匹配 + 键盘导航 + 高亮 | Cmd/Ctrl+K，↑↓ Enter Esc | ⭐⭐⭐ |
 | ㉔ | **Blob Morph 液态形变** | SVG `<path>` 的 `d` 属性在同点数 path 间 GSAP morph | elastic.out(1, 0.6) | ⭐⭐ |
+| ㉕ | **Folding Drawer 千层酥抽拉** | 同位多卡 + data-stack-pos 阶梯偏移 → 顶卡向左前方 transform 抽出；wheel/touch/keyboard 三模驱动 | offset 20/14、scale 0.94→0.70、cubic-bezier(0.34,1.22,0.64,1) | ⭐⭐ |
 
 ---
 
@@ -255,6 +258,7 @@ Pointer  光标     ⑨ 3D 倾斜                  ⑩ 玻璃
 | **Power User Workspace** | ㉓ Cmd+K + ⑫ 粒子（背景） + ⑬ 涟漪（按钮） | IDE / Dev Tool / 后台类工具 |
 | **Data Story Scroll** | ㉒ 滚动驱动数字 + ⑭ 粘性堆叠 + ⑳ 噪点 | 财报页 / 数据长图 / 年度回顾 |
 | **Liquid Showcase** | ㉔ Blob Morph + ⑰ 流式打字机 + ⑲ H-Scroll | Stripe 风落地 / Loading / 空状态 |
+| **Color Card Stack** | ㉕ Folding Drawer + ⑤ 揭示（顶卡标题） + ⑧ 翻牌（counter） | 配色面板 / 设计系统色卡 / 主题浏览 |
 
 ---
 
@@ -283,6 +287,9 @@ Pointer  光标     ⑨ 3D 倾斜                  ⑩ 玻璃
 - ❌ **Blob Morph 的两个 path 点数不同** → GSAP 无法插值，形态直接跳变
 - ❌ **滚动驱动数字忘开 tabular-nums** → 数字宽度变化引起布局抖动
 - ❌ **JS 动态创建的元素挂渐入类(如 .rv)** → 滚动观察器在它诞生前就已收集完毕,永远没人观察它,元素**永久隐形**;渐入必须挂在静态父容器上,子项跟随容器状态入场
+- ❌ **Folding Drawer 用旋转/折叠 3D 效果** → 用户实测反馈：千层酥视觉必须纯抽拉，旋转显得廉价
+- ❌ **Folding Drawer 末位卡 opacity 0** → 千层酥的核心是「边缘可见」，末位保留 ≥ 0.18
+- ❌ **Folding Drawer 书签做独立列表** → 失去「从卡延伸出来」的物理感；书签必须是 .card 子元素，跟着 transform 走
 
 ### 6.2 错配缓动
 
@@ -354,6 +361,7 @@ if (motionQuery.matches) {
 | ㉒ 滚动驱动数字 | 显示最终数字，无动画 |
 | ㉓ 命令栏 | 仅在导航菜单展示所有功能 |
 | ㉔ Blob Morph | 静态 SVG 形状 |
+| ㉕ Folding Drawer | 普通轮播（无 transform，fade-in 切换） |
 
 **三冗余原则**：关键状态变化必须**颜色 + 形状 + 文本**三重提示，不只靠动效。
 

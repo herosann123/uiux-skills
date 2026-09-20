@@ -621,6 +621,180 @@
     color: var(--muted); letter-spacing: 0.05em;
   }
 
+  /* ========== ㉕ FOLDING DRAWER 千层酥抽拉 ========== */
+  .drawer-demo {
+    height: 600px; background: var(--bg-2);
+    position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .drawer-tag {
+    position: absolute; top: 32px; left: 32px;
+    font-family: var(--mono); font-size: 11px; color: var(--accent);
+    letter-spacing: 0.12em; text-transform: uppercase;
+  }
+  .drawer-counter {
+    position: absolute; top: 32px; right: 32px;
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+  .drawer-counter .now {
+    font-family: var(--serif); font-size: 28px; font-weight: 380;
+    color: var(--ink); margin-right: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .drawer-hint {
+    position: absolute; bottom: 28px; left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+    letter-spacing: 0.18em; text-transform: uppercase;
+    text-align: center; line-height: 1.7;
+  }
+  .drawer-hint .touch-only { display: none; }
+  .drawer-hint.is-touch .mouse-only { display: none; }
+  .drawer-hint.is-touch .touch-only { display: inline; }
+
+  .drawer-stage {
+    position: relative;
+    width: 580px; height: 480px;
+    /* 触摸设备：完全接管手势，避免浏览器竖向滚动与 swipe 冲突 */
+    touch-action: none;
+  }
+  .drawer-deck { position: absolute; inset: 0; }
+
+  .drawer-card {
+    position: absolute; top: 0; left: 0;
+    width: 320px; height: 400px;
+    border-radius: 18px;
+    color: rgba(0,0,0,0.78);
+    padding: 22px 22px 22px;
+    display: flex; flex-direction: column;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    transition:
+      transform 0.7s cubic-bezier(0.34, 1.22, 0.64, 1),
+      opacity 0.55s ease,
+      box-shadow 0.5s ease;
+    will-change: transform, opacity;
+    /* 关键：不要 overflow:hidden —— 书签要从卡片右边缘延伸出来，被剪掉就看不见 */
+  }
+  .drawer-card-head {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--mono); font-size: 10px;
+    color: rgba(0,0,0,0.6); letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .drawer-card-head .pill {
+    padding: 3px 9px; border: 1px solid rgba(0,0,0,0.35);
+    border-radius: 99px; font-size: 8px; letter-spacing: 0.18em;
+  }
+  .drawer-card-body {
+    margin-top: auto; display: flex; flex-direction: column;
+    gap: 8px;
+  }
+  .drawer-card-title {
+    font-family: var(--serif); font-size: 32px; font-weight: 500;
+    letter-spacing: -0.02em; line-height: 0.95;
+    color: rgba(0,0,0,0.82);
+  }
+  .drawer-card-desc {
+    font-size: 12px; line-height: 1.5;
+    color: rgba(0,0,0,0.6); max-width: 90%;
+  }
+  .drawer-card-foot {
+    margin-top: 12px; padding-top: 12px;
+    border-top: 1px solid rgba(0,0,0,0.12);
+    display: flex; justify-content: space-between;
+    font-family: var(--mono); font-size: 9px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: rgba(0,0,0,0.5);
+  }
+
+  /* 激活态：向左前方"抽拉"出来 */
+  .drawer-card.active {
+    transform: translate(-12px, -6px) scale(1.02);
+    z-index: 100;
+    box-shadow:
+      0 4px 8px rgba(0,0,0,0.1),
+      0 20px 40px rgba(0,0,0,0.28),
+      0 50px 100px rgba(0,0,0,0.32);
+  }
+  /* 千层酥阶梯偏移 */
+  .drawer-card[data-stack-pos="1"] { transform: translate(18px, 12px) scale(0.94); opacity: 0.88; z-index: 90; }
+  .drawer-card[data-stack-pos="2"] { transform: translate(36px, 24px) scale(0.88); opacity: 0.72; z-index: 80; }
+  .drawer-card[data-stack-pos="3"] { transform: translate(54px, 36px) scale(0.82); opacity: 0.54; z-index: 70; }
+  .drawer-card[data-stack-pos="4"] { transform: translate(72px, 48px) scale(0.76); opacity: 0.34; z-index: 60; }
+  .drawer-card[data-stack-pos="5"] { transform: translate(90px, 60px) scale(0.70); opacity: 0.20; z-index: 50; }
+
+  /* 配色（与 v3 设计语言协调的暖色 + 冷色） */
+  .drawer-card[data-color="1"] { background: linear-gradient(135deg, #ff8a5b 0%, #ff5e7e 100%); }
+  .drawer-card[data-color="2"] { background: linear-gradient(135deg, #4ecdc4 0%, #2bb8af 100%); }
+  .drawer-card[data-color="3"] { background: linear-gradient(135deg, #ffe66d 0%, #ffb84d 100%); }
+  .drawer-card[data-color="4"] { background: linear-gradient(135deg, #a78bfa 0%, #7c5cf0 100%); color: #fff; }
+  .drawer-card[data-color="5"] { background: linear-gradient(135deg, #6dd5ed 0%, #2193b0 100%); }
+  .drawer-card[data-color="6"] { background: linear-gradient(135deg, #f4a261 0%, #e76f51 100%); }
+  .drawer-card[data-color="4"] .drawer-card-head,
+  .drawer-card[data-color="4"] .drawer-card-body,
+  .drawer-card[data-color="4"] .drawer-card-foot { color: rgba(255,255,255,0.85); }
+  .drawer-card[data-color="4"] .drawer-card-head .pill { border-color: rgba(255,255,255,0.5); }
+  .drawer-card[data-color="4"] .drawer-card-title { color: #fff; }
+  .drawer-card[data-color="4"] .drawer-card-foot { border-top-color: rgba(255,255,255,0.18); }
+
+  /* 书签：从卡片右边缘延伸 */
+  .drawer-bookmark {
+    position: absolute;
+    right: -110px; top: 24px;
+    width: 110px; height: 44px;
+    background: rgba(0,0,0,0.78);
+    color: #fff;
+    border-radius: 0 8px 8px 0;
+    display: flex; align-items: center;
+    padding: 0 10px 0 12px; gap: 10px;
+    cursor: pointer;
+    z-index: 5;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: opacity 0.4s ease, transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1);
+  }
+  .drawer-bookmark-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%; background: #fff; opacity: 0.85;
+    flex-shrink: 0;
+    box-shadow: 0 0 8px rgba(255,255,255,0.5);
+  }
+  .drawer-bookmark-text {
+    display: flex; flex-direction: column; gap: 1px;
+    min-width: 0; flex: 1; overflow: hidden;
+  }
+  .drawer-bookmark-num {
+    font-family: var(--mono); font-size: 9px;
+    letter-spacing: 0.15em; opacity: 0.6;
+  }
+  .drawer-bookmark-title {
+    font-family: var(--sans); font-size: 12px; font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  /* 用户偏好：激活 = 正在展示 = 高亮（亮的） */
+  .drawer-card.active .drawer-bookmark { opacity: 1; }
+  .drawer-card.active .drawer-bookmark-dot {
+    background: #fff;
+    box-shadow: 0 0 10px rgba(255,255,255,0.7);
+  }
+  /* 未激活 = 折叠在堆里 = 暗 */
+  .drawer-card:not(.active) .drawer-bookmark { opacity: 0.28; }
+  .drawer-card:not(.active) .drawer-bookmark-dot {
+    background: rgba(255,255,255,0.5);
+    box-shadow: none;
+  }
+  .drawer-card:not(.active):hover .drawer-bookmark {
+    opacity: 0.7;
+    transform: translateX(-3px);
+  }
+
+  /* 触摸设备去掉自定义光标对齐 */
+  @media (hover: none), (pointer: coarse) {
+    .drawer-hint { font-size: 9px; }
+  }
+
   /* ========== ㉔ BLOB MORPH ========== */
   .blob-demo {
     height: 600px; background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
@@ -725,12 +899,20 @@
     .cmdk-trigger { min-width: 0; width: 100%; }
     .cursor-dot, .cursor-ring, .cursor-trail { display: none; }
     .hscroll-panel { padding: 32px; }
+    /* ㉕ folding drawer — 移动端断点 */
+    .drawer-stage { width: 92vw; max-width: 460px; height: 420px; }
+    .drawer-card { width: min(70vw, 240px); height: 360px; padding: 18px; }
+    .drawer-card-title { font-size: 26px; }
+    .drawer-bookmark { right: -84px; width: 84px; height: 40px; top: 18px; padding: 0 7px 0 9px; }
+    .drawer-bookmark-title { font-size: 11px; }
   }
-  /* 手机横屏 / 短视口:压缩 demo 高度 */
+  /* 短横屏：折叠抽屉压缩 */
   @media (max-height: 700px) {
     .cursor-demo, .hscroll-wrapper, .noise-demo, .glitch-demo,
-    .scrolldemo, .cmdk-demo, .blob-demo { height: min(600px, 88vh); }
+    .scrolldemo, .cmdk-demo, .blob-demo, .drawer-demo { height: min(600px, 88vh); }
     .cmdk-overlay { padding-top: min(8vh, 48px); }
+    .drawer-stage { height: 380px; }
+    .drawer-card { height: 320px; }
   }
 </style>
 </head>
@@ -746,6 +928,7 @@
     <a href="#ch22"><span>22</span>Scroll#</a>
     <a href="#ch23"><span>23</span>Cmd+K</a>
     <a href="#ch24"><span>24</span>Blob</a>
+    <a href="#ch25"><span>25</span>Drawer</a>
   </nav>
 </header>
 
@@ -772,10 +955,10 @@
   <div class="meta">
     <span>Vol. 03 · The Frontier</span>
     <span>·</span>
-    <span>7 Patterns · 2025</span>
+    <span>8 Patterns · 2025</span>
   </div>
-  <h1>The <em>Frontier.</em><br>7 Cutting Edge.</h1>
-  <p class="lede">第三辑 —— 7 个当下最顶级产品正在使用的交互。从自定义光标到 SVG 形变，每一种都在重新定义「高级感」的视觉语言。</p>
+  <h1>The <em>Frontier.</em><br>8 Cutting Edge.</h1>
+  <p class="lede">第三辑 —— 8 个当下最顶级产品正在使用的交互。从自定义光标到千层酥抽拉，每一种都在重新定义「高级感」的视觉语言。</p>
   <div class="scroll-cue" onclick="document.getElementById('ch18').scrollIntoView({behavior:'smooth'})">
     <span class="line"></span>
     <span>Continue · 继续</span>
@@ -1145,6 +1328,179 @@ gsap.to(shape, {
 </pre>
 </section>
 
+<!-- ========== CHAPTER 25: FOLDING DRAWER ========== -->
+<section class="chapter" id="ch25">
+  <div class="chapter-head">
+    <div class="chapter-num">25</div>
+    <div class="chapter-meta">
+      <div class="chapter-tag">Stack · 千层酥</div>
+      <h2 class="chapter-title">折叠抽屉</h2>
+      <p class="chapter-desc">多张卡同位堆叠，按 <strong>data-stack-pos</strong> 阶梯偏移；顶卡<strong>向左前方"抽拉"滑出</strong>。滚轮 / 触摸滑动 / 键盘 ↑↓←→ 三模驱动；书签作为卡的子元素，从卡边缘"伸出来"——<strong>正在展示的卡的书签高亮，堆叠中的书签变暗</strong>。配色面板 / 色卡 / 主题切换的招牌手法。</p>
+    </div>
+  </div>
+  <div class="demo-frame">
+    <div class="demo-label">demo · scroll / swipe / arrows</div>
+    <div class="demo-area drawer-demo" id="drawerDemo">
+      <div class="drawer-tag">Folding Drawer</div>
+      <div class="drawer-counter">
+        <span class="now" id="drawerNow">01</span>
+        <span>/ 06</span>
+      </div>
+      <div class="drawer-stage" id="drawerStage">
+        <div class="drawer-deck" id="drawerDeck">
+
+          <div class="drawer-card" data-color="1">
+            <div class="drawer-card-head"><span>№ 01</span><span class="pill">WARM</span></div>
+            <div class="drawer-card-body">
+              <div class="drawer-card-title">Coral<br>Sunset</div>
+              <div class="drawer-card-desc">柔橘落日色 · 温暖而不灼人</div>
+              <div class="drawer-card-foot"><span>COLOR · UI KIT</span><span>→</span></div>
+            </div>
+            <div class="drawer-bookmark" data-target="0">
+              <span class="drawer-bookmark-dot"></span>
+              <div class="drawer-bookmark-text">
+                <div class="drawer-bookmark-num">01</div>
+                <div class="drawer-bookmark-title">Coral Sunset</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="drawer-card" data-color="2">
+            <div class="drawer-card-head"><span>№ 02</span><span class="pill">FRESH</span></div>
+            <div class="drawer-card-body">
+              <div class="drawer-card-title">Mint<br>Breeze</div>
+              <div class="drawer-card-desc">薄荷凉风 · 干净通透</div>
+              <div class="drawer-card-foot"><span>COLOR · BRAND</span><span>→</span></div>
+            </div>
+            <div class="drawer-bookmark" data-target="1">
+              <span class="drawer-bookmark-dot"></span>
+              <div class="drawer-bookmark-text">
+                <div class="drawer-bookmark-num">02</div>
+                <div class="drawer-bookmark-title">Mint Breeze</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="drawer-card" data-color="3">
+            <div class="drawer-card-head"><span>№ 03</span><span class="pill">BRIGHT</span></div>
+            <div class="drawer-card-body">
+              <div class="drawer-card-title">Honey<br>Glow</div>
+              <div class="drawer-card-desc">蜂蜜暖光 · 活力饱满</div>
+              <div class="drawer-card-foot"><span>COLOR · PROMO</span><span>→</span></div>
+            </div>
+            <div class="drawer-bookmark" data-target="2">
+              <span class="drawer-bookmark-dot"></span>
+              <div class="drawer-bookmark-text">
+                <div class="drawer-bookmark-num">03</div>
+                <div class="drawer-bookmark-title">Honey Glow</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="drawer-card" data-color="4">
+            <div class="drawer-card-head"><span>№ 04</span><span class="pill">DREAMY</span></div>
+            <div class="drawer-card-body">
+              <div class="drawer-card-title">Lavender<br>Haze</div>
+              <div class="drawer-card-desc">紫罗兰薄雾 · 柔和高级</div>
+              <div class="drawer-card-foot"><span>COLOR · CAMPAIGN</span><span>→</span></div>
+            </div>
+            <div class="drawer-bookmark" data-target="3">
+              <span class="drawer-bookmark-dot"></span>
+              <div class="drawer-bookmark-text">
+                <div class="drawer-bookmark-num">04</div>
+                <div class="drawer-bookmark-title">Lavender Haze</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="drawer-card" data-color="5">
+            <div class="drawer-card-head"><span>№ 05</span><span class="pill">COOL</span></div>
+            <div class="drawer-card-body">
+              <div class="drawer-card-title">Sky<br>Drift</div>
+              <div class="drawer-card-desc">天空蓝渐变 · 冷静克制</div>
+              <div class="drawer-card-foot"><span>COLOR · DASHBOARD</span><span>→</span></div>
+            </div>
+            <div class="drawer-bookmark" data-target="4">
+              <span class="drawer-bookmark-dot"></span>
+              <div class="drawer-bookmark-text">
+                <div class="drawer-bookmark-num">05</div>
+                <div class="drawer-bookmark-title">Sky Drift</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="drawer-card" data-color="6">
+            <div class="drawer-card-head"><span>№ 06</span><span class="pill">SPICY</span></div>
+            <div class="drawer-card-body">
+              <div class="drawer-card-title">Saffron<br>Flame</div>
+              <div class="drawer-card-desc">藏红花火苗色 · 浓烈有力</div>
+              <div class="drawer-card-foot"><span>COLOR · E-COMM</span><span>→</span></div>
+            </div>
+            <div class="drawer-bookmark" data-target="5">
+              <span class="drawer-bookmark-dot"></span>
+              <div class="drawer-bookmark-text">
+                <div class="drawer-bookmark-num">06</div>
+                <div class="drawer-bookmark-title">Saffron Flame</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div class="drawer-hint" id="drawerHint">
+        <span class="mouse-only">↳ SCROLL · CLICK A TAB · OR PRESS ↑ ↓</span>
+        <span class="touch-only">↳ TAP A TAB · SWIPE TO SWITCH</span>
+      </div>
+    </div>
+  </div>
+  <pre class="code-block"><span class="cmt">// 核心：同位多卡 + data-stack-pos 阶梯偏移 + 顶卡抽拉</span>
+<span class="cmt">// [0] = 当前激活卡；每张按 i 写入 stack-pos，CSS 用属性选择器控样式</span>
+<span class="kw">const</span> cards = Array.from(deck.querySelectorAll(<span class="str">'.drawer-card'</span>));
+<span class="kw">const</span> order = cards.slice();
+
+<span class="kw">function</span> <span class="fn">applyStack</span>() {
+  order.forEach((c, i) =&gt; {
+    <span class="kw">if</span> (i === <span class="num">0</span>) { c.classList.add(<span class="str">'active'</span>); c.removeAttribute(<span class="str">'data-stack-pos'</span>); }
+    <span class="kw">else</span>          { c.classList.remove(<span class="str">'active'</span>); c.dataset.stackPos = i; }
+  });
+}
+
+<span class="kw">function</span> <span class="fn">next</span>()  { order.push(order.shift()); applyStack(); }
+<span class="kw">function</span> <span class="fn">prev</span>()  { order.unshift(order.pop()); applyStack(); }
+<span class="kw">function</span> <span class="fn">goTo</span>(c) {                       <span class="cmt">// 书签点击</span>
+  <span class="kw">const</span> i = order.indexOf(c); <span class="kw">if</span> (i &lt;= <span class="num">0</span>) <span class="kw">return</span>;
+  order.splice(i, <span class="num">1</span>); order.unshift(c); applyStack();
+}
+
+<span class="cmt">// wheel — 桌面端（必须 preventDefault，否则页面跟着滚）</span>
+<span class="kw">let</span> lock = <span class="kw">false</span>;
+window.addEventListener(<span class="str">'wheel'</span>, (e) =&gt; {
+  e.preventDefault();
+  <span class="kw">if</span> (lock || Math.abs(e.deltaY) &lt; <span class="num">4</span>) <span class="kw">return</span>;
+  lock = <span class="kw">true</span>; setTimeout(() =&gt; lock = <span class="kw">false</span>, <span class="num">200</span>);
+  e.deltaY &gt; <span class="num">0</span> ? next() : prev();
+}, { passive: <span class="kw">false</span> });
+
+<span class="cmt">// touch — 触摸设备 (≥40px 阈值)</span>
+<span class="kw">let</span> ty = <span class="kw">null</span>;
+window.addEventListener(<span class="str">'touchstart'</span>, (e) =&gt; { ty = e.touches[<span class="num">0</span>].clientY; }, { passive: <span class="kw">true</span> });
+window.addEventListener(<span class="str">'touchend'</span>,   (e) =&gt; {
+  <span class="kw">if</span> (ty === <span class="kw">null</span>) <span class="kw">return</span>;
+  <span class="kw">const</span> dy = ty - e.changedTouches[<span class="num">0</span>].clientY;
+  <span class="kw">if</span> (Math.abs(dy) &gt; <span class="num">40</span>) dy &gt; <span class="num">0</span> ? next() : prev();
+  ty = <span class="kw">null</span>;
+}, { passive: <span class="kw">true</span> });
+
+<span class="cmt">// keyboard — ↑↓←→</span>
+window.addEventListener(<span class="str">'keydown'</span>, (e) =&gt; {
+  <span class="kw">if</span> (e.key === <span class="str">'ArrowDown'</span> || e.key === <span class="str">'ArrowRight'</span>) { e.preventDefault(); next(); }
+  <span class="kw">if</span> (e.key === <span class="str">'ArrowUp'</span>   || e.key === <span class="str">'ArrowLeft'</span>)  { e.preventDefault(); prev(); }
+});
+
+applyStack();
+</pre>
+</section>
+
 <footer>
   <div class="grid">
     <div>
@@ -1154,7 +1510,7 @@ gsap.to(shape, {
     <div>
       <h4>Skill</h4>
       <ul>
-        <li>17 patterns</li>
+        <li>25 patterns</li>
         <li>v1 · v2 · v3</li>
         <li>SKILL.md · INDEX</li>
         <li>PATTERNS.md</li>
@@ -1170,6 +1526,7 @@ gsap.to(shape, {
         <li>㉒ Scroll #</li>
         <li>㉓ Cmd+K</li>
         <li>㉔ Blob Morph</li>
+        <li>㉕ Folding Drawer</li>
       </ul>
     </div>
   </div>
@@ -1519,6 +1876,117 @@ gsap.to(shape, {
   setInterval(() => {
     morphTo((currentBlob + 1) % blobPaths.length);
   }, 3500);
+
+  // ============ ㉕ FOLDING DRAWER 千层酥抽拉 ============
+  // 设计原则：
+  // - 只动 transform / opacity（GPU 友好）
+  // - 滚轮锁 200ms 防疯狂触发
+  // - 触摸阈值 40px
+  // - 书签是 .drawer-card 的子元素，跟着卡 transform 走（不要做独立列表）
+  const drawerDeck = document.getElementById('drawerDeck');
+  const drawerNow  = document.getElementById('drawerNow');
+  const drawerHint = document.getElementById('drawerHint');
+  const drawerCards = drawerDeck ? Array.from(drawerDeck.querySelectorAll('.drawer-card')) : [];
+  const TOTAL_DRAWER = drawerCards.length;
+  let drawerOrder = drawerCards.slice();
+  let drawerWheelLock = false;
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+
+  function applyDrawerStack() {
+    drawerOrder.forEach((card, i) => {
+      if (i === 0) {
+        card.classList.add('active');
+        card.removeAttribute('data-stack-pos');
+      } else {
+        card.classList.remove('active');
+        card.dataset.stackPos = i;
+      }
+    });
+    // counter 显示当前激活卡在原数组中的位置
+    const idx = drawerCards.indexOf(drawerOrder[0]);
+    if (drawerNow) drawerNow.textContent = pad2(idx + 1);
+  }
+
+  function drawerNext() { drawerOrder.push(drawerOrder.shift()); applyDrawerStack(); }
+  function drawerPrev() { drawerOrder.unshift(drawerOrder.pop()); applyDrawerStack(); }
+  function drawerGoTo(card) {
+    const i = drawerOrder.indexOf(card);
+    if (i <= 0) return;
+    drawerOrder.splice(i, 1); drawerOrder.unshift(card); applyDrawerStack();
+  }
+
+  // 触摸设备切换 hint
+  const isTouchDrawer = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+  if (drawerHint && isTouchDrawer) drawerHint.classList.add('is-touch');
+
+  // wheel：仅当鼠标悬停在 demo 之上才响应（页面其他 wheel 行为不受影响）
+  const drawerDemo = document.getElementById('drawerDemo');
+  if (drawerDemo) {
+    drawerDemo.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      if (drawerWheelLock || Math.abs(e.deltaY) < 4) return;
+      drawerWheelLock = true;
+      setTimeout(() => drawerWheelLock = false, 200);
+      e.deltaY > 0 ? drawerNext() : drawerPrev();
+    }, { passive: false });
+
+    // touch：演示区内的 swipe / tap —— 与桌面 wheel 等价的纵向手势
+    // 设计要点：
+    // 1. 三段事件都在 drawerDemo 上，不污染外层滚动
+    // 2. touchstart 命中 .drawer-bookmark 时直接 return —— 书签走自己的 click
+    // 3. tsMoved 区分 tap（≤300ms & 无位移）和 swipe（位移或快速轻扫）
+    // 4. swipe 触发：距离 ≥ 50px  OR  速度 ≥ 0.3 px/ms（快速轻扫也算）
+    // 5. .drawer-stage touch-action:none 已防止浏览器竖向 pan 抢手势
+    let ds = null, dsT = 0, dsMoved = false;
+
+    drawerDemo.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) { ds = null; return; }
+      if (e.target.closest('.drawer-bookmark')) { ds = null; return; }
+      ds = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      dsT = Date.now();
+      dsMoved = false;
+    }, { passive: true });
+
+    drawerDemo.addEventListener('touchmove', (e) => {
+      if (!ds || e.touches.length !== 1) return;
+      const dy = ds.y - e.touches[0].clientY;
+      if (Math.abs(dy) > 8) dsMoved = true;
+    }, { passive: true });
+
+    drawerDemo.addEventListener('touchend', (e) => {
+      if (!ds) return;
+      const dy = ds.y - e.changedTouches[0].clientY;
+      const dt = Date.now() - dsT;
+      const v  = dt > 0 ? Math.abs(dy) / dt : 0;
+      // tap：不切卡，让原生 click 处理（书签跳转 / 卡面 advance）
+      if (!dsMoved && dt < 300) { ds = null; return; }
+      // swipe：距离阈值 或 速度阈值
+      if (Math.abs(dy) >= 50 || v >= 0.3) {
+        dy > 0 ? drawerNext() : drawerPrev();
+      }
+      ds = null; dsMoved = false;
+    }, { passive: true });
+
+    // 多指 / 系统打断 → 复位
+    drawerDemo.addEventListener('touchcancel', () => { ds = null; dsMoved = false; }, { passive: true });
+
+    // keyboard：仅当 demo 在视口内时
+    drawerDemo.tabIndex = 0;
+    drawerDemo.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); drawerNext(); }
+      if (e.key === 'ArrowUp'   || e.key === 'ArrowLeft')  { e.preventDefault(); drawerPrev(); }
+    });
+
+    // 书签点击直接跳转
+    drawerCards.forEach(card => {
+      const bm = card.querySelector('.drawer-bookmark');
+      if (!bm) return;
+      bm.addEventListener('click', (e) => { e.stopPropagation(); drawerGoTo(card); });
+    });
+  }
+
+  applyDrawerStack();
 
 })();
 </script>

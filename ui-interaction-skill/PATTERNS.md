@@ -2225,3 +2225,209 @@ if (motionQuery.matches) {
   // 不启动 setInterval 自动循环
 }
 ```
+
+---
+
+## ㉕ Folding Drawer 千层酥抽拉
+
+### 原理
+**多张卡同位定位 → 每张按 `data-stack-pos` 累加 translate+scale+opacity → 顶卡激活时向左前方"抽拉"滑出**。与 ③ 卡片堆叠（拖拽阈值飞出）相反：㉕ 是**键盘 / 滚轮 / 触摸驱动**的「轮播式抽拉」，每张卡都保留可见边缘（千层酥视觉）。
+
+### 适用模块
+- 颜色方案 / 色卡展示（用户实测场景）
+- 设计系统组件库切换
+- 作品集分类入口（每张=一个项目）
+- 报告 / 仪表盘的视角切换
+- 任何"有限集合 + 顺序浏览"的内容（≤ 8 项最佳）
+
+### 不适用
+- ❌ 长列表 / Feed（用普通滚动）
+- ❌ 内容需要详细阅读（千层酥的尺寸不利于阅读）
+- ❌ 需要拖拽飞出的 Tinder 式匹配（用 ③）
+
+### 核心代码
+
+```html
+<div class="stage">
+  <div class="deck" id="deck">
+    <div class="card" data-color="1">
+      <div class="face"><!-- 内容 --></div>
+      <div class="bookmark">
+        <span class="bookmark-dot"></span>
+        <div class="bookmark-text">
+          <div class="bookmark-num">01</div>
+          <div class="bookmark-title">Coral Sunset</div>
+        </div>
+      </div>
+    </div>
+    <!-- 更多卡片 -->
+  </div>
+</div>
+```
+
+```css
+/* —— 卡片层叠（只动 transform / opacity） —— */
+.card {
+  position: absolute; top: 0; left: 0;
+  width: 380px; height: 440px;
+  transition:
+    transform 0.75s cubic-bezier(0.34, 1.22, 0.64, 1),
+    opacity 0.55s ease,
+    box-shadow 0.5s ease;
+  will-change: transform, opacity;
+}
+
+/* —— 激活态：向左前方"抽拉"出来 —— */
+.card.active {
+  transform: translate(-14px, -8px) scale(1.02);
+  z-index: 100;
+  box-shadow:
+    0 4px 10px rgba(0,0,0,0.14),
+    0 24px 50px rgba(0,0,0,0.32),
+    0 60px 120px rgba(0,0,0,0.38);
+}
+
+/* —— 千层酥偏移阶梯 —— */
+.card[data-stack-pos="1"] { transform: translate(20px, 14px) scale(0.94); opacity: 0.85; }
+.card[data-stack-pos="2"] { transform: translate(40px, 28px) scale(0.88); opacity: 0.68; }
+.card[data-stack-pos="3"] { transform: translate(60px, 42px) scale(0.82); opacity: 0.50; }
+.card[data-stack-pos="4"] { transform: translate(80px, 56px) scale(0.76); opacity: 0.32; }
+.card[data-stack-pos="5"] { transform: translate(100px, 70px) scale(0.70); opacity: 0.18; }
+
+/* —— 书签：从卡片右边缘"伸出来"（作为 .card 子元素，跟着 transform 走） —— */
+.bookmark {
+  position: absolute;
+  right: -130px; top: 28px;
+  width: 130px; height: 52px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.card.active .bookmark { opacity: 0.32; filter: saturate(0.4); }   /* 用户偏好：激活=已消费=暗 */
+```
+
+```javascript
+const cards = Array.from(document.querySelectorAll('.card'));
+const order = cards.slice();   // [0] = 当前激活
+
+function applyStack() {
+  order.forEach((card, i) => {
+    if (i === 0) { card.classList.add('active'); card.removeAttribute('data-stack-pos'); }
+    else         { card.classList.remove('active'); card.dataset.stackPos = i; }
+  });
+}
+
+function next() { order.push(order.shift()); applyStack(); }
+function prev() { order.unshift(order.pop()); applyStack(); }
+function goTo(card) {
+  const idx = order.indexOf(card); if (idx <= 0) return;
+  order.splice(idx, 1); order.unshift(card); applyStack();
+}
+
+// 滚轮（锁定 200ms 防止疯狂触发）
+let wheelLock = false;
+window.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  if (wheelLock || Math.abs(e.deltaY) < 4) return;
+  wheelLock = true; setTimeout(() => wheelLock = false, 200);
+  e.deltaY > 0 ? next() : prev();
+}, { passive: false });
+
+// 触摸（40px 阈值）
+let ty = null;
+window.addEventListener('touchstart', (e) => { ty = e.touches[0].clientY; }, { passive: true });
+window.addEventListener('touchend', (e) => {
+  if (ty === null) return;
+  const dy = ty - e.changedTouches[0].clientY;
+  if (Math.abs(dy) > 40) dy > 0 ? next() : prev();
+  ty = null;
+}, { passive: true });
+
+// 键盘
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); next(); }
+  if (e.key === 'ArrowUp'   || e.key === 'ArrowLeft')  { e.preventDefault(); prev(); }
+});
+
+// 书签点击直接跳转
+cards.forEach(c => c.querySelector('.bookmark')?.addEventListener('click', (e) => {
+  e.stopPropagation(); goTo(c);
+}));
+
+applyStack();
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| 卡片数量 | ≤ 8 | 超过 8 张后面的层完全不可见 |
+| 偏移步长 | 20px / 14px | x/y 偏移量；差值 ≥ 6 否则看不出层次 |
+| 缩放 | 0.94 → 0.70 | 5 级递减；≥ 6 级最后一级 ≤ 0.66 失去边缘感 |
+| 透明度 | 1 → 0.18 | 末位 0.18 是「可感知但已不抢戏」的甜区 |
+| 抽出动画 | `cubic-bezier(0.34, 1.22, 0.64, 1)` | 弹性过冲 ~20%，比 plain ease 更有「拉出」感 |
+| duration | 0.6~0.8s | 太短像闪烁，太长显得拖沓 |
+| wheel 锁 | 200ms | 防意外连续滚；不要太长否则跟手感差 |
+| touch 阈值 | 40px | 太小误触，太大不易触发 |
+
+### 必备功能清单
+- [x] **滚轮切换** + 200ms 防抖
+- [x] **键盘 ↑↓←→** 切换
+- [x] **触摸滑动** ≥40px 切换
+- [x] **书签点击**直接跳转（不是装饰）
+- [x] **active 视觉态**：transform + scale + 强 box-shadow + 书签高亮（亮的）
+- [x] **非 active 视觉态**：偏移+缩放+降透明度 + 书签变暗（≤0.3）
+- [x] **书签语义对照**：正在展示的卡 = 亮书签；折叠在堆里的卡 = 暗书签
+- [x] **千层酥边缘保留**：最后一级 opacity ≥ 0.18，scale ≥ 0.70
+- [x] **counter** 显示当前位置
+- [x] **响应式**：5 档断点（1024/720/540/400 + 横屏）
+- [x] **`prefers-reduced-motion`** 关闭 transition
+
+### 反模式（必须避免）
+- ❌ **旋转/折叠 3D 效果** → 用户实测反馈：「千层酥只要抽拉感，不要旋转」；旋转显得廉价且难读
+- ❌ **动 `width/height`** → 每帧 layout 重排，掉帧；只动 `transform` + `opacity`
+- ❌ **书签做成独立列表** → 失去「从卡延伸出来」的物理感；书签必须是 `.card` 的子元素
+- ❌ **隐藏后续卡（opacity 0）** → 千层酥的核心是「边缘可见」；末位也保留 0.18 透明度
+- ❌ **层级数 > 5** → 偏移累计会超出容器，视觉上也读不出层次
+- ❌ **键盘响应把页面滚动了** → 一定要 `e.preventDefault()`，否则页面跟着滚
+- ❌ **wheel 不 preventDefault** → 桌面端页面会滚动
+- ❌ **末位卡缩放 < 0.66** → 边缘太窄看不见
+
+### 移动端铁律
+- `touch-action: pan-y`：保留页面竖向手势，但允许 JS 监听 touchstart/end
+- `.bookmark` 加 `-webkit-tap-highlight-color: transparent` + `touch-action: manipulation`
+- **card + bookmark 总宽必须 ≤ 视口宽度**（在 540/400px 断点收窄）
+- 横屏（`max-height: 500px`）压缩卡高 + 字号
+- 在 540px 以下隐藏 `meta` / `hint` 等装饰元素
+
+### 无障碍 fallback
+```css
+@media (prefers-reduced-motion: reduce) {
+  .card, .bookmark { transition: none !important; }
+  .card.active { transform: none; }   /* 顶卡不"抽拉"出来，但仍可见 */
+}
+```
+
+```javascript
+// 键盘 alt/ctrl 修饰键不响应（避免与屏幕阅读器冲突）
+// 已经过 viewport 检查：基本所有屏幕阅读器都支持 data-stack-pos / data-color attribute
+```
+
+### 与其他模式的关系
+- **vs ③ 卡片堆叠**：③ 是「拖拽阈值飞出 / 弹性回弹」（Tinder 风）；㉕ 是「键盘/滚轮/触摸驱动轮播」（色卡 / 配色面板风）。两者完全不重叠
+- **vs ⑮ FLIP 共享元素**：⑯ 是「卡片 → 详情页」的过渡；㉕ 是「同页内集合浏览」
+- **可叠加 ⑤ 文字揭示**（千层酥顶卡的标题文字逐字入场）或 ⑧ 数字翻牌（counter 数字变化时翻牌）
+
+---
+
+## 附：错误速查（搬不上台面的踩坑）
+
+| 症状 | 原因 | 修法 |
+|------|------|------|
+| 顶卡"抽拉"出来卡顿 | transition 时间太长（> 1s） | 缩到 0.6~0.8s |
+| 卡片变换时边缘锯齿 | 没开 `will-change: transform` | 加在 .card 上 |
+| 滚轮触发页面滚动 | wheel 没 `preventDefault` | 监听加 `{ passive: false }` 并 `e.preventDefault()` |
+| 触摸时跟手卡顿 | 没设 `touch-action: pan-y` | 加在 .card 上 |
+| 末位卡完全看不见 | opacity 设到 0 或 scale 设太小 | 末位保留 opacity 0.18 / scale 0.70 |
+| 移动端书签被裁切 | card+bookmark 总宽 > 视口 | 540px / 400px 断点收窄 card / bookmark |
+| active 卡被后面的卡盖住 | z-index 设错 | .card.active 用 `z-index: 100`，其他递减 |
+| 书签 hover 时整体晃动 | 书签作为 .card 子元素但加了 transform | hover 时只动 `.bookmark` 自身，不要动 .card |
