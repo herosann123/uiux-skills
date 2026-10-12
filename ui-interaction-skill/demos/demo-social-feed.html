@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>社区 Feed · Social Feed Premium</title>
+<style>
+  :root {
+    --bg: #0e0f13; --panel: #171921; --panel-2: #1e212c;
+    --ink: #f2f3f7; --ink-dim: #9aa0b4;
+    --accent: #ff8a9e; --danger: #ff5a6e;
+    --ios-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--ink); line-height: 1.5;
+    max-width: 560px; margin: 0 auto;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  header.topbar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px;
+    background: rgba(14,15,19,.82); backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  header.topbar h1 { font-size: 18px; flex: 1; }
+  .noti {
+    position: relative; border: none; background: none;
+    font-size: 20px; cursor: pointer; touch-action: manipulation;
+    color: var(--ink); padding: 4px;
+  }
+  .badge {
+    position: absolute; top: 0; right: -4px;
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 18px; height: 18px; padding: 0 5px;
+    border-radius: 99px; background: var(--danger); color: #fff;
+    font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
+    opacity: 0; transform: scale(.5);
+    transition: opacity .2s, transform .25s cubic-bezier(.34,1.56,.64,1);
+  }
+  .badge.on { opacity: 1; transform: scale(1); }
+  .badge.bump { animation: badgeBump .45s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes badgeBump {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.4); background: #ff7d8e; }
+    100% { transform: scale(1); }
+  }
+  .badge .fly {
+    position: absolute; left: 50%; top: 0;
+    font-size: 11px; font-weight: 800; color: var(--danger);
+    animation: flyUp .7s ease-out forwards; pointer-events: none; white-space: nowrap;
+  }
+  @keyframes flyUp {
+    from { transform: translate(-50%,0); opacity: 1; }
+    to { transform: translate(-50%,-24px); opacity: 0; }
+  }
+
+  /* ㊷ 横滑通知 */
+  .notibar-wrap { padding: 12px 16px 0; position: relative; }
+  .notibar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; border-radius: 12px; margin-bottom: 10px;
+    background: linear-gradient(135deg, rgba(255,138,158,.16), rgba(255,138,158,.06));
+    border: 1px solid rgba(255,138,158,.22);
+    touch-action: pan-y; will-change: transform; position: relative; overflow: hidden;
+  }
+  .notibar .nico {
+    width: 36px; height: 36px; border-radius: 10px; flex: 0 0 auto;
+    background: linear-gradient(135deg, #ff8a9e, #c56adf);
+    display: flex; align-items: center; justify-content: center; font-size: 17px;
+  }
+  .notibar .nmeta { flex: 1; min-width: 0; }
+  .notibar .nmeta b { display: block; font-size: 13px; }
+  .notibar .nmeta span { display: block; font-size: 12px; color: var(--ink-dim); margin-top: 2px; }
+  .notibar .nx {
+    border: none; background: none; color: var(--ink-dim);
+    font-size: 15px; cursor: pointer; padding: 6px; touch-action: manipulation;
+  }
+  .notibar.enter { animation: nIn .4s var(--ios-ease); }
+  @keyframes nIn { from { opacity: 0; transform: translateY(-14px); } }
+
+  /* ㊻ 骨架屏 */
+  main.feed { padding: 12px 16px 40px; display: flex; flex-direction: column; gap: 16px; }
+  .card { position: relative; }
+  .card-frame { border-radius: 16px; overflow: hidden; background: #0b0d12; position: relative; }
+  .sk, .real-photo { aspect-ratio: 4/4.6; }
+  .sk {
+    position: relative; overflow: hidden; background: #232838;
+    display: flex; flex-direction: column; gap: 10px; padding: 14px;
+  }
+  .sk::after {
+    content: ''; position: absolute; inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.07) 40%, rgba(255,255,255,.13) 50%, rgba(255,255,255,.07) 60%, transparent);
+    animation: shimmer 1.4s infinite;
+  }
+  @keyframes shimmer { to { transform: translateX(100%); } }
+  .sk-av { width: 40px; height: 40px; border-radius: 50%; }
+  .sk-l { height: 14px; border-radius: 6px; width: 55%; }
+  .sk-img { flex: 1; border-radius: 10px; margin-top: 4px; }
+
+  .real-photo {
+    position: absolute; inset: 0;
+    opacity: 0; transform: translateY(8px);
+    transition: opacity .35s, transform .35s var(--ios-ease);
+    display: flex; flex-direction: column;
+  }
+  .card.loaded .sk { opacity: 0; transition: opacity .25s; pointer-events: none; }
+  .card.loaded .real-photo { opacity: 1; transform: translateY(0); }
+
+  .photo {
+    flex: 1; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 76px; touch-action: manipulation; user-select: none;
+    border-radius: 10px;
+  }
+  .p1 { background: linear-gradient(150deg, #45325e, #1d1a2c); }
+  .p2 { background: linear-gradient(150deg, #2c4a45, #16211e); }
+  .p3 { background: linear-gradient(150deg, #59422e, #241c14); }
+  .like-burst {
+    position: absolute; z-index: 5; font-size: 64px;
+    pointer-events: none; transform: translate(-50%,-50%);
+    animation: likePop .95s cubic-bezier(0.32,0.72,0,1) forwards;
+  }
+  @keyframes likePop {
+    0%   { transform: translate(-50%,-50%) scale(0) rotate(0); opacity: 0; }
+    22%  { transform: translate(-50%,-50%) scale(1.3) rotate(-6deg); opacity: 1; }
+    38%  { transform: translate(-50%,-50%) scale(1) rotate(-6deg); }
+    100% { transform: translate(-50%,-190px) scale(.9) rotate(-15deg); opacity: 0; }
+  }
+  .pfoot {
+    display: flex; align-items: center; gap: 12px; padding: 10px 2px 2px;
+  }
+  .pfoot .pav { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+  .pfoot .pmeta { flex: 1; min-width: 0; }
+  .pfoot .pmeta b { display: block; font-size: 13px; }
+  .pfoot .pmeta span { display: block; font-size: 11px; color: var(--ink-dim); margin-top: 1px; }
+  .hbtn {
+    border: none; background: none; font-size: 22px; cursor: pointer;
+    touch-action: manipulation; transition: transform .18s cubic-bezier(.34,1.56,.64,1);
+  }
+  .hbtn:active { transform: scale(1.35); }
+  .hbtn.liked { color: var(--danger); }
+  .cnt { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 13px; display: inline-block; }
+  .cnt.bump { animation: cBump .45s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes cBump { 40% { transform: scale(1.35); color: var(--danger); } }
+  footer.note { text-align: center; color: var(--ink-dim); font-size: 12px; padding: 8px 16px 30px; }
+
+  .simu {
+    position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    display: flex; gap: 8px;
+  }
+  .sbtn {
+    border: none; border-radius: 99px; cursor: pointer;
+    padding: 10px 16px; font-size: 13px; font-weight: 600;
+    background: rgba(255,255,255,.14); color: var(--ink);
+    backdrop-filter: blur(10px); touch-action: manipulation;
+    transition: transform .18s cubic-bezier(.34,1.56,.64,1);
+  }
+  .sbtn:active { transform: scale(.94); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sk::after { animation: none; }
+    .like-burst { animation: likeFade .2s forwards; }
+    @keyframes likeFade { to { opacity: 0; } }
+    .badge, .notibar, .real-photo, .sbtn, .hbtn { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <h1>发现</h1>
+  <button class="noti" id="notiBtn" aria-label="通知">
+    🔔<span class="badge" id="notiBadge" aria-live="polite">0</span>
+  </button>
+</header>
+
+<div class="notibar-wrap" id="notiWrap">
+  <div class="notibar enter" id="notibar0">
+    <div class="nico">💬</div>
+    <div class="nmeta"><b>苏三 赞了你的照片</b><span>「周末 · 蓝湾」· 2 分钟前</span></div>
+    <button class="nx" aria-label="关闭">✕</button>
+  </div>
+</div>
+
+<main class="feed" id="feed"></main>
+
+<footer class="note">㊶ 双击点赞 · ㊻ 骨架屏 · ㊷ 横滑通知 · ㊼ 角标弹跳 · ㉜ 触感</footer>
+
+<div class="simu">
+  <button class="sbtn" id="simuNoti">来一条新通知</button>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const HAPTIC = { tap: 8, snap: 4, success: [16, 40, 24], warn: [10, 60, 10, 60, 10] };
+  const haptic = (t) => { if (navigator.vibrate && !reduced) navigator.vibrate(HAPTIC[t] || 8); };
+
+  /* ---------- Feed 数据 ---------- */
+  const posts = [
+    { name: '苏三', emoji: '🌊', cls: 'p1', av: 'linear-gradient(135deg,#ff8a9e,#c56adf)', likes: 328, cap: '周末 · 蓝湾', time: '2 小时前' },
+    { name: '林一', emoji: '🌿', cls: 'p2', av: 'linear-gradient(135deg,#6ea8fe,#4ade80)', likes: 512, cap: '径山徒步日记', time: '5 小时前' },
+    { name: '周可', emoji: '🍂', cls: 'p3', av: 'linear-gradient(135deg,#f6b26b,#e8590c)', likes: 967, cap: '巷口的秋天', time: '昨天' },
+  ];
+
+  const feed = document.getElementById('feed');
+  posts.forEach((p) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML =
+      '<div class="card-frame">' +
+        '<div class="sk"><div class="sk sk-av"></div><div class="sk sk-l"></div><div class="sk sk-img"></div></div>' +
+        '<div class="real-photo">' +
+          '<div class="photo ' + p.cls + '">' + p.emoji +
+            '<div class="pfoot">' +
+              '<div class="pav" style="background:' + p.av + '">' + p.name[0] + '</div>' +
+              '<div class="pmeta"><b>' + p.name + '</b><span>' + p.cap + ' · ' + p.time + '</span></div>' +
+              '<button class="hbtn" aria-pressed="false">🤍</button>' +
+              '<span class="cnt">' + p.likes.toLocaleString() + '</span>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    feed.appendChild(card);
+    setTimeout(() => card.classList.add('loaded'), 900 + posts.indexOf(p) * 350);
+  });
+
+  /* ---------- ㊶ 双击点赞 + ㊼ 计数 bump ---------- */
+  const getTX = (el) => {
+    const t = getComputedStyle(el).transform;
+    return t === 'none' ? 0 : new DOMMatrixReadOnly(t).m41;
+  };
+  feed.addEventListener('pointerdown', (e) => {
+    const photo = e.target.closest('.photo');
+    if (!photo) return;
+    const now = performance.now();
+    if (photo._lastTap && now - photo._lastTap < 250) {
+      like(photo, e.clientX, e.clientY);
+      photo._lastTap = 0;
+    } else photo._lastTap = now;
+  });
+  function like(photo, x, y) {
+    haptic('tap');
+    const foot = photo.querySelector('.pfoot');
+    const cntEl = foot.querySelector('.cnt');
+    const btn = foot.querySelector('.hbtn');
+    const likes = +cntEl.dataset.n + 1 || (cntEl.dataset.n = +cntEl.textContent.replace(/,/g, ''), +cntEl.dataset.n + 1);
+    cntEl.dataset.n = likes;
+    cntEl.textContent = likes.toLocaleString();
+    retigger(cntEl);
+    btn.textContent = '❤️';
+    btn.classList.add('liked');
+    btn.setAttribute('aria-pressed', 'true');
+    const rect = photo.getBoundingClientRect();
+    const burst = document.createElement('div');
+    burst.className = 'like-burst';
+    burst.textContent = '❤️';
+    burst.style.left = (x - rect.left) + 'px';
+    burst.style.top = (y - rect.top) + 'px';
+    photo.appendChild(burst);
+    setTimeout(() => burst.remove(), 1000);
+  }
+  function retigger(el) {
+    el.classList.remove('bump');
+    void el.offsetWidth;
+    el.classList.add('bump');
+  }
+  feed.addEventListener('click', (e) => {
+    const btn = e.target.closest('.hbtn');
+    if (!btn) return;
+    const foot = btn.closest('.pfoot');
+    const cntEl = foot.querySelector('.cnt');
+    const liked = btn.classList.contains('liked');
+    const n = liked ? +cntEl.dataset.n - 1 : +cntEl.dataset.n + 1;
+    cntEl.dataset.n = n;
+    cntEl.textContent = n.toLocaleString();
+    retigger(cntEl);
+    btn.textContent = liked ? '🤍' : '❤️';
+    btn.classList.toggle('liked', !liked);
+    btn.setAttribute('aria-pressed', String(!liked));
+    haptic(liked ? 'tap' : 'success');
+  });
+
+  /* ---------- ㊷ 横滑通知 ---------- */
+  function dismissible(card) {
+    let d = null;
+    card.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.nx')) return;
+      d = { x0: e.clientX, y0: e.clientY, lastX: e.clientX, lastT: performance.now(), v: 0, lock: null };
+      card.style.transition = 'none';
+    });
+    card.addEventListener('pointermove', (e) => {
+      if (!d) return;
+      const dx = e.clientX - d.x0, dy = e.clientY - d.y0;
+      if (!d.lock) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        d.lock = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+        if (d.lock === 'v') { d = null; reset(); return; }
+      }
+      const now = performance.now();
+      d.v = (e.clientX - d.lastX) / Math.max(now - d.lastT, 1);
+      d.lastX = e.clientX; d.lastT = now;
+      card.style.transform = 'translateX(' + dx + 'px) rotate(' + dx * 0.05 + 'deg)';
+      card.style.opacity = String(1 - Math.min(Math.abs(dx) / 260, 0.55));
+    });
+    function reset() {
+      card.style.transition = 'transform .3s cubic-bezier(0.32,0.72,0,1), opacity .3s';
+      card.style.transform = ''; card.style.opacity = '';
+    }
+    card.addEventListener('pointerup', () => {
+      if (!d) return;
+      const dx = getTX(card), v = d.v; d = null;
+      if (Math.abs(dx) > card.offsetWidth * 0.4 || Math.abs(v) > 0.5) flyOut(card, dx);
+      else reset();
+    });
+    card.addEventListener('pointercancel', () => { d = null; reset(); });
+  }
+  function flyOut(card, dx) {
+    haptic('success');
+    card.style.transition = 'transform .32s cubic-bezier(0.32,0.72,0,1), opacity .32s';
+    card.style.transform = 'translateX(' + (dx > 0 ? 1 : -1) * 130 + '%) rotate(' + dx * 0.05 + 'deg)';
+    card.style.opacity = '0';
+    setTimeout(() => collapse(card), reduced ? 0 : 330);
+  }
+  function collapse(card) {
+    card.style.height = card.offsetHeight + 'px';
+    card.style.padding = '0 14px';
+    requestAnimationFrame(() => {
+      card.style.transition = 'height .28s cubic-bezier(0.32,0.72,0,1), margin .28s, padding .28s';
+      card.style.height = '0'; card.style.margin = '0'; card.style.padding = '0';
+      setTimeout(() => card.remove(), 300);
+    });
+  }
+  document.querySelectorAll('.notibar').forEach(dismissible);
+  document.querySelectorAll('.notibar .nx').forEach((b) =>
+    b.addEventListener('click', (e) => { e.stopPropagation(); collapse(b.closest('.notibar')); haptic('tap'); }));
+
+  /* ---------- ㊼ 未读角标 + 新通知 ---------- */
+  const notiBadge = document.getElementById('notiBadge');
+  const notiWrap = document.getElementById('notiWrap');
+  const NOTIS = [
+    ['💬', '林一 赞了你的照片', '「径山徒步日记」· 刚刚'],
+    ['⭐', '周可 关注了你', '你们有 3 位共同好友'],
+    ['🔥', '你的照片上了热门', '「巷口的秋天」· 曝光 +2.4k'],
+  ];
+  let unread = 1, notiIdx = 0;
+  function setUnread(n, delta) {
+    unread = n;
+    notiBadge.classList.toggle('on', n > 0);
+    notiBadge.textContent = n > 99 ? '99+' : String(n);
+    if (n > 0) {
+      notiBadge.classList.remove('bump');
+      void notiBadge.offsetWidth;
+      notiBadge.classList.add('bump');
+      if (delta >= 2) {
+        const fly = document.createElement('span');
+        fly.className = 'fly';
+        fly.textContent = '+' + delta;
+        notiBadge.appendChild(fly);
+        setTimeout(() => fly.remove(), 700);
+      }
+      haptic('tap');
+    }
+  }
+  setUnread(1);
+  document.getElementById('notiBtn').addEventListener('click', () => {
+    setUnread(0, 0);
+    haptic('snap');
+  });
+  document.getElementById('simuNoti').addEventListener('click', () => {
+    const n = NOTIS[notiIdx++ % NOTIS.length];
+    const bar = document.createElement('div');
+    bar.className = 'notibar enter';
+    bar.innerHTML =
+      '<div class="nico">' + n[0] + '</div>' +
+      '<div class="nmeta"><b>' + n[1] + '</b><span>' + n[2] + '</span></div>' +
+      '<button class="nx" aria-label="关闭">✕</button>';
+    notiWrap.prepend(bar);
+    dismissible(bar);
+    bar.querySelector('.nx').addEventListener('click', (e) => {
+      e.stopPropagation(); collapse(bar); haptic('tap');
+    });
+    setUnread(unread + 1, 1);
+    haptic('success');
+  });
+})();
+</script>
+</body>
+</html>

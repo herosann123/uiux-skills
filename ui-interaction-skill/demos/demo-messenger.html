@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>私信 · Messenger Feel</title>
+<style>
+:root{
+  --bg:#0e0f13; --panel:#171921; --panel-2:#1e212c; --ink:#f2f3f7; --ink-dim:#9aa0b4;
+  --accent:#6ea8fe; --accent-2:#b18cf5; --danger:#ff5a6e; --ok:#4ade80;
+  --ios-ease:cubic-bezier(0.32,0.72,0,1);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",sans-serif;
+  height:100dvh;overflow:hidden;display:flex;justify-content:center;
+}
+.stage{
+  position:relative;width:min(420px,100%);height:100dvh;overflow:hidden;
+  display:flex;flex-direction:column;background:var(--bg);
+  padding-top:env(safe-area-inset-top);
+}
+.topbar{
+  flex:0 0 auto;display:flex;align-items:center;gap:12px;
+  padding:12px 16px;border-bottom:1px solid var(--panel-2);
+}
+.back{
+  width:34px;height:34px;border-radius:50%;border:none;background:var(--panel);
+  color:var(--ink);font-size:16px;cursor:pointer;touch-action:manipulation;
+  transition:transform .18s var(--ios-ease);
+}
+.back:active{transform:scale(.92)}
+.avatar{
+  width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.tinfo{flex:1;min-width:0}
+.tname{font-weight:700;font-size:15px}
+.tstat{font-size:12px;color:var(--ink-dim);transition:color .3s}
+.tstat.typing{color:var(--ok)}
+.notibtn{
+  position:relative;width:34px;height:34px;border-radius:50%;border:none;
+  background:var(--panel);color:var(--ink);font-size:15px;cursor:pointer;
+  touch-action:manipulation;transition:transform .18s var(--ios-ease);
+}
+.notibtn:active{transform:scale(.92)}
+.badge{
+  position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;border-radius:9px;
+  background:var(--danger);color:#fff;font-size:10px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;padding:0 4px;
+  transform:scale(0);transition:transform .3s cubic-bezier(0.34,1.56,0.64,1);
+}
+.badge.show{transform:scale(1)}
+.badge.bump{animation:badgeBump .45s cubic-bezier(0.34,1.56,0.64,1)}
+@keyframes badgeBump{0%{transform:scale(1)}35%{transform:scale(1.35)}100%{transform:scale(1)}}
+.note{
+  flex:0 0 auto;margin:8px 16px 0;padding:10px 12px;border-radius:12px;
+  background:var(--panel);color:var(--ink-dim);font-size:12px;line-height:1.6;
+}
+/* ---------- 消息流 ---------- */
+.flow{
+  flex:1;overflow-y:auto;overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;padding:14px 16px 8px;
+  display:flex;flex-direction:column;gap:10px;
+}
+.daysep{align-self:center;font-size:11px;color:var(--ink-dim);background:var(--panel);
+  padding:4px 10px;border-radius:99px;margin:4px 0}
+.msg{max-width:76%;display:flex;flex-direction:column;align-self:flex-start}
+.msg.me{align-self:flex-end;align-items:flex-end}
+.msg.peak{animation:peakIn .32s var(--ios-ease)}
+@keyframes peakIn{from{opacity:0;transform:translateY(10px) scale(.94)}to{opacity:1;transform:none}}
+.bub{
+  padding:10px 13px;border-radius:18px;font-size:14px;line-height:1.5;
+  background:var(--panel);border-bottom-left-radius:6px;
+}
+.msg.me .bub{
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#0e0f13;
+  border-bottom-left-radius:18px;border-bottom-right-radius:6px;font-weight:500;
+}
+.mtime{font-size:10px;color:var(--ink-dim);margin:0 4px}
+/* ---------- ㊺ 按住说话 ---------- */
+.composer{
+  flex:0 0 auto;display:flex;gap:10px;align-items:center;
+  padding:10px 16px calc(12px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--panel-2);
+}
+.holdbtn{
+  flex:1;height:48px;border-radius:14px;border:1.5px dashed var(--panel-2);
+  background:var(--panel);color:var(--ink-dim);font-size:14px;font-weight:600;
+  cursor:pointer;user-select:none;-webkit-user-select:none;
+  touch-action:none;transition:transform .18s var(--ios-ease),background .2s,color .2s,border-color .2s;
+}
+.holdbtn.rec{
+  background:var(--danger);color:#fff;border-color:var(--danger);
+  transform:scale(.97);font-size:0;
+}
+.wave{
+  position:absolute;inset:0;display:none;align-items:center;justify-content:center;gap:4px;
+  pointer-events:none;
+}
+.wave span{
+  width:4px;border-radius:2px;background:#fff;height:8px;
+  animation:waveBar 0s var(--ios-ease) infinite alternate;animation-play-state:paused;
+}
+.holdbtn.rec .wave{display:flex}
+@keyframes waveBar{from{height:5px}to{height:22px}}
+.rec-tip{
+  position:fixed;left:50%;bottom:120px;transform:translateX(-50%);
+  background:var(--panel);border-radius:12px;padding:8px 14px;
+  font-size:12px;color:var(--ink-dim);opacity:0;pointer-events:none;
+  transition:opacity .25s;
+}
+.rec-tip.show{opacity:1}
+.rec-tip .cancel-zone{color:var(--danger);font-weight:700}
+.icobtn{
+  width:44px;height:44px;border-radius:50%;border:none;background:var(--panel);
+  color:var(--ink);font-size:18px;cursor:pointer;flex:0 0 auto;
+  touch-action:manipulation;transition:transform .18s var(--ios-ease);
+}
+.icobtn:active{transform:scale(.9)}
+/* ---------- ㊷ 可横滑关闭的通知横幅 ---------- */
+.banner-wrap{flex:0 0 auto;overflow:hidden}
+.banner{
+  position:relative;display:flex;align-items:center;gap:10px;
+  margin:10px 16px 0;padding:11px 14px;border-radius:14px;
+  background:linear-gradient(135deg,var(--panel-2),var(--panel));
+  border:1px solid var(--panel-2);cursor:grab;
+  transition:transform .34s var(--ios-ease),opacity .3s,height .3s .05s,margin .3s .05s,padding .3s .05s;
+  overflow:hidden;
+}
+.banner.flinging{transition:transform .34s var(--ios-ease),opacity .28s}
+.banner.collapse{height:0 !important;margin:0 16px;padding:0 14px;opacity:0;border-width:0}
+.banner .bico{font-size:18px;flex:0 0 auto}
+.banner .btxt{flex:1;min-width:0;font-size:13px;line-height:1.45}
+.banner .btxt b{font-weight:700}
+.banner .hint{flex:0 0 auto;font-size:11px;color:var(--ink-dim)}
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.01ms !important;transition-duration:.01ms !important}
+}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <div class="topbar">
+    <button class="back" aria-label="返回">‹</button>
+    <div class="avatar">🐳</div>
+    <div class="tinfo">
+      <div class="tname">深海同学</div>
+      <div class="tstat" id="tstat">在线</div>
+    </div>
+    <button class="notibtn" id="notifBtn" aria-label="通知">🔔<span class="badge" id="notifBadge">0</span></button>
+  </div>
+
+  <div class="banner-wrap" id="bannerWrap"></div>
+
+  <div class="note">按住下方按钮说话；录音中上滑 80px 取消。对方回复可点「来一条新消息」模拟，横幅可横滑关闭。</div>
+
+  <div class="flow" id="flow"></div>
+
+  <div class="composer">
+    <button class="icobtn" id="simBtn" aria-label="来一条新消息" title="模拟对方消息">💬</button>
+    <div style="position:relative;flex:1">
+      <button class="holdbtn" id="holdBtn">🎤 按住 说话</button>
+      <div class="wave" id="wave"></div>
+    </div>
+    <button class="icobtn" id="emojiBtn" aria-label="表情">😊</button>
+  </div>
+
+  <div class="rec-tip" id="recTip">↑ 上滑取消</div>
+
+</div>
+
+<script>
+(function(){
+'use strict';
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const haptic = p => { try{ navigator.vibrate && navigator.vibrate(p); }catch(e){} };
+const HAPTIC = { tap:8, start:10, cancel:[10,30], send:12, recv:14, snap:4 };
+
+/* ---------- 初始消息 ---------- */
+const flow = document.getElementById('flow');
+function addMsg(text, me, t){
+  const wrap = document.createElement('div');
+  wrap.className = 'msg' + (me ? ' me' : '');
+  if(!reduced) wrap.classList.add('peak');
+  const b = document.createElement('div');
+  b.className = 'bub'; b.textContent = text;
+  const m = document.createElement('div');
+  m.className = 'mtime'; m.textContent = t || (new Date()).toTimeString().slice(0,5);
+  wrap.appendChild(b); wrap.appendChild(m);
+  flow.appendChild(wrap);
+  flow.scrollTop = flow.scrollHeight;
+  return wrap;
+}
+const sep = document.createElement('div');
+sep.className = 'daysep'; sep.textContent = '今天';
+flow.appendChild(sep);
+addMsg('在吗？那个动效 demo 你看了没', false, '14:02');
+addMsg('看了！那个按住说话的手感真不错', true, '14:03');
+addMsg('特别是上滑取消那条，跟微信一个味儿', true, '14:03');
+addMsg('哈哈，用了对数阻尼 + 速度双判定', false, '14:05');
+
+/* ---------- ㊺ 按住说话 ---------- */
+const holdBtn = document.getElementById('holdBtn');
+const wave = document.getElementById('wave');
+const recTip = document.getElementById('recTip');
+// 生成 12 根波形条，相位错开
+for(let i=0;i<12;i++){
+  const s = document.createElement('span');
+  s.style.animationDelay = (i*0.055)+'s';
+  s.style.animationDuration = (0.16 + (i%3)*0.05)+'s';
+  if(reduced) s.style.animationDuration = '0s';
+  wave.appendChild(s);
+}
+let rec = null;
+holdBtn.addEventListener('pointerdown', e=>{
+  if(rec) return;
+  holdBtn.setPointerCapture(e.pointerId);
+  rec = { y0:e.clientY, id:e.pointerId, cancelled:false, t0:Date.now() };
+  holdBtn.classList.add('rec');
+  recTip.classList.add('show');
+  haptic(HAPTIC.start);
+  e.preventDefault();
+});
+holdBtn.addEventListener('pointermove', e=>{
+  if(!rec || rec.cancelled) return;
+  const dy = rec.y0 - e.clientY;
+  const canceling = dy > 80;                    // 上滑 80px 取消
+  if(canceling !== rec.wasCanceling){
+    rec.wasCanceling = canceling;
+    recTip.innerHTML = canceling ? '<span class="cancel-zone">✕ 松手取消</span>' : '↑ 上滑取消';
+    haptic(HAPTIC.snap);
+  }
+  // 波形随位移压低
+  wave.style.opacity = canceling ? '0.35' : '1';
+});
+function endRec(e){
+  if(!rec) return;
+  const dy = rec.y0 - e.clientY;
+  const cancelled = dy > 80;
+  holdBtn.classList.remove('rec');
+  recTip.classList.remove('show');
+  recTip.innerHTML = '↑ 上滑取消';
+  wave.style.opacity = '';
+  const dur = ((Date.now() - rec.t0)/1000).toFixed(1);
+  rec = null;
+  if(cancelled){
+    haptic(HAPTIC.cancel);
+    return;                                     // 静默取消，不发送
+  }
+  haptic(HAPTIC.send);
+  addMsg('🎤 语音 ' + dur + '″', true);
+}
+holdBtn.addEventListener('pointerup', endRec);
+holdBtn.addEventListener('pointercancel', ()=>{    // 来电/系统手势 → 静默复位
+  if(!rec) return;
+  rec = null;
+  holdBtn.classList.remove('rec');
+  recTip.classList.remove('show');
+  recTip.innerHTML = '↑ 上滑取消';
+  wave.style.opacity = '';
+  haptic(HAPTIC.cancel);
+});
+
+/* ---------- ㊼ 未读角标 + 模拟来信 + 正在输入 ---------- */
+const notifBadge = document.getElementById('notifBadge');
+const tstat = document.getElementById('tstat');
+let unread = 0;
+function bumpBadge(){
+  unread++;
+  notifBadge.textContent = unread;
+  notifBadge.classList.remove('show'); void notifBadge.offsetWidth;
+  notifBadge.classList.add('show','bump');
+  setTimeout(()=>notifBadge.classList.remove('bump'), 500);
+}
+const REPLIES = [
+  '对！这就是「跟手优先」那定律',
+  '松手才上曲线，1:1 跟随那招',
+  '你发的结算流 demo 我也试了，粒子不卡了',
+  '预渲染 sprite 那个优化确实顶',
+  '晚上一起把 messenger demo 写完？',
+  '好，说定了 🙌',
+];
+let replyIdx = 0;
+const simBtn = document.getElementById('simBtn');
+simBtn.addEventListener('click', ()=>{
+  if(tstat.classList.contains('typing')) return;
+  tstat.textContent = '对方正在输入…';
+  tstat.classList.add('typing');
+  bumpBadge();                                  // 来信即 +1 未读
+  haptic(HAPTIC.recv);
+  setTimeout(()=>{
+    tstat.textContent = '在线';
+    tstat.classList.remove('typing');
+    addMsg(REPLIES[replyIdx++ % REPLIES.length], false);
+    unread = Math.max(0, unread-1);             // 读到了，减一
+    notifBadge.textContent = unread || '';
+    notifBadge.classList.toggle('show', unread > 0);
+  }, 1200);
+});
+document.getElementById('notifBtn').addEventListener('click', ()=>{
+  unread = 0;
+  notifBadge.classList.remove('show','bump');
+  haptic(HAPTIC.tap);
+});
+document.getElementById('emojiBtn').addEventListener('click', ()=>haptic(HAPTIC.tap));
+
+/* ---------- ㊷ 横滑关闭通知横幅 ---------- */
+const bannerWrap = document.getElementById('bannerWrap');
+function addBanner(ico, html){
+  const b = document.createElement('div');
+  b.className = 'banner';
+  b.innerHTML = '<span class="bico">'+ico+'</span>'+
+    '<span class="btxt">'+html+'</span>'+
+    '<span class="hint">↔ 滑动关闭</span>';
+  b._h = 0;
+  bindDismiss(b);
+  bannerWrap.appendChild(b);
+  return b;
+}
+function bindDismiss(b){
+  let st = null;
+  b.addEventListener('pointerdown', e=>{
+    st = { x0:e.clientX, t0:Date.now(), dragging:false };
+    b.setPointerCapture(e.pointerId);
+  });
+  b.addEventListener('pointermove', e=>{
+    if(!st) return;
+    const dx = e.clientX - st.x0;
+    if(!st.dragging && Math.abs(dx) > 8) st.dragging = true;
+    if(!st.dragging) return;
+    const damp = dx < 0 ? dx : dx * 0.35;       // 只向左飞出，向右阻尼
+    b.style.transition = 'none';
+    b.style.transform = 'translateX('+damp+'px) rotate('+(damp*0.03)+'deg)';
+  });
+  function up(e){
+    if(!st) return;
+    const dx = e.clientX - st.x0;
+    const vx = dx / Math.max(1, Date.now() - st.t0);
+    st = null;
+    b.style.transition = '';
+    if(dx < -70 || vx < -0.5){                    // 位移 + 速度双判定飞出
+      b.classList.add('flinging');
+      b.style.transform = 'translateX(-120%) rotate(-4deg)';
+      b.style.opacity = '0';
+      haptic(HAPTIC.snap);
+      setTimeout(()=>{
+        b.classList.add('collapse');              // 高度坍缩合洞
+        setTimeout(()=>b.remove(), 380);
+      }, 280);
+    } else {
+      b.style.transform = '';
+      b.style.opacity = '';
+    }
+  }
+  b.addEventListener('pointerup', up);
+  b.addEventListener('pointercancel', ()=>{
+    if(!st) return;
+    st = null;
+    b.style.transition = '';
+    b.style.transform = '';
+  });
+}
+addBanner('📣','<b>新功能上线</b> · 语音消息支持滑动手势取消了，快试试');
+addBanner('❤️','<b>深海同学</b> 赞了你的截图「结算流动效」');
+})();
+</script>
+</body>
+</html>

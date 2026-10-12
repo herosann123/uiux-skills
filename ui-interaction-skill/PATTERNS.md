@@ -2419,6 +2419,2245 @@ applyStack();
 
 ---
 
+## ㉖ 原生手感滚动 Native-Feel Scrolling
+
+### 原理
+**优先用浏览器原生滚动（transform 交给合成线程），再用 `scroll-snap` 做吸附、`overscroll-behavior` 做边界、CSS `scroll-behavior` / Lenis 式 lerp 做平滑**。「顺滑」的本质 = 惯性（momentum）+ 吸附（snap）+ 不掉帧（合成线程滚动）。
+
+> 铁律：**永远不要用 JS 每帧改 `scrollTop`/`translateY` 去劫持原生滚动**（`wheel`/`touchmove` 里 preventDefault 再手写位移 = 掉帧 + 惯性手感全失）。要平滑就用 `scroll-snap` + `scrollend` 事件；要「丝滑匀速」整页滚动才用 Lenis。
+
+### 适用模块
+- 手机端任何横向卡片轨道（首页金刚区、精选推荐、Stories）
+- 全屏引导页（Onboarding，每屏一页）
+- 图片浏览器（一图一屏）
+- 需要平滑滚动的长落地页（Lenis）
+
+### 不适用
+- ❌ 竖向信息流（用普通原生滚动即可，snap 反而烦人）
+- ❌ 桌面端鼠标滚轮 + 强制 snap（滚半格卡住，体验差；桌面用 JS 分页按钮）
+
+### 核心代码（横向 snap 轨道 —— 90% 的移动端场景）
+
+```html
+<div class="track">
+  <div class="card">…</div>
+  <div class="card">…</div>
+  <div class="card">…</div>
+</div>
+```
+
+```css
+.track {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;   /*  proximity = 松手自由，mandatory = 必吸附 */
+  scroll-padding: 0 20px;          /* 吸附时两侧留白对齐 */
+  overscroll-behavior-x: contain;  /* 滚到头不传染给页面 */
+  -webkit-overflow-scrolling: touch; /* 老 iOS 惯性 */
+  scrollbar-width: none;           /* FF 隐藏滚动条 */
+}
+.track::-webkit-scrollbar { display: none; }
+.card {
+  flex: 0 0 min(78vw, 320px);      /* 78vw：下一张露一角，暗示可滑 */
+  scroll-snap-align: start;
+  scroll-margin: 0 6px;
+}
+```
+
+```javascript
+// 分页点 / 进度指示：监听 scroll，用 rAF 节流 + lerp 平滑
+const track = document.querySelector('.track');
+let ticking = false;
+track.addEventListener('scroll', () => {
+  if (ticking) return;
+  ticking = true;
+  requestAnimationFrame(() => {
+    const idx = Math.round(track.scrollLeft / (track.scrollWidth - track.clientWidth) * (N - 1));
+    dots.forEach((d, i) => d.classList.toggle('on', i === idx));
+    ticking = false;
+  });
+}, { passive: true });   // passive:true 是性能铁律，别 preventDefault
+```
+
+### 进阶：Lenis 式平滑滚动（整页丝滑，可选）
+
+```javascript
+// 只适合「整页叙事落地页」；信息流禁用（用户要的是快速定位，不是丝滑）
+let target = 0, current = 0;
+window.addEventListener('wheel', (e) => {
+  if (reducedMotion) return;
+  e.preventDefault();
+  target = clamp(target + e.deltaY, 0, maxScroll);
+}, { passive: false });
+
+function raf() {
+  current += (target - current) * 0.09;   // lerp 0.08~0.12
+  window.scrollTo(0, current);
+  requestAnimationFrame(raf);
+}
+requestAnimationFrame(raf);
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| snap 类型 | `x mandatory` | 引导页/Stories 用 mandatory；商品轨道用 proximity 更宽容 |
+| 卡宽 | `min(78vw, 320px)` | 露出下一张 22%，是最强的「可滑动」暗示 |
+| lerp | 0.08~0.12 | Lenis 默认 0.1；越小越「漂」，越大越「跟」 |
+| `overscroll-behavior` | `contain` | 内滚容器必加，防滚动穿透 + 禁掉 Chrome 亮发光下拉 |
+| 吸附动画 | `scroll-snap-stop: always` | 高速滑动时强制一张一张停（Stories 翻页），普通轨道用默认 |
+
+### 避坑
+- ❌ **JS 劫持 touchmove 手写滚动** → 惯性没了、掉帧、和系统手势打架；原生滚动 + snap 即可
+- ❌ **scroll 监听里直接改 DOM 不节流** → 一帧 60 次回调，必卡；rAF 节流
+- ❌ **嵌套轨道不加 `overscroll-behavior: contain`** → 横轨滚完自动滚页面，用户「被甩走」
+- ❌ **mandatory snap 卡片间距不均** → 吸附位置错乱；统一用 gap + scroll-padding
+- ❌ **100vh 容器内 snap** → 移动端地址栏伸缩导致 vh 抖动，用 `100dvh`
+- ❌ 桌面鼠标滚轮 + mandatory → 滚轮一次跨多张但被 snap 拽回来，桌面端配按钮或改 `proximity`
+
+### 无障碍 fallback
+```css
+@media (prefers-reduced-motion: reduce) {
+  .track { scroll-snap-type: none; scroll-behavior: auto; }
+  /* Lenis 平滑滚动直接不启动（见上面 JS 的 reducedMotion 判断） */
+}
+```
+- 键盘可达：卡片加 `tabindex="0"`，方向键聚焦后原生滚动即可翻页
+
+---
+
+## ㉗ 滑动返回 Interactive Swipe-Back
+
+### 原理
+**左边缘 20px 热区监听 pointerdown → 新页面 `translateX` 跟手（0→100%）→ 松手按位移/速度二选一：回弹 or 完成返回**。精髓在「跟手 + 可中断」：用户按住页面能拖到一半再推回去，这是原生 App 和 Web 之间最大的手感分水岭。
+
+### 适用模块
+- 手机端 H5 / WebApp 的页面栈（详情页、二级页返回）
+- 全屏图片查看器返回
+- 小程序自定义返回手势（配合 wx 页面栈）
+
+### 不适用
+- ❌ 桌面端（无触摸，直接给返回按钮/浏览器后退）
+- ❌ 页面内有横向滚动轨道（手势冲突；需热区判定 + 首次 move 方向锁）
+
+### 核心代码
+
+```javascript
+const EDGE = 24;                 // 边缘热区宽度 px
+const page = document.querySelector('.page');
+let startX = 0, startY = 0, tracking = false, locked = null;
+
+document.addEventListener('pointerdown', (e) => {
+  if (e.clientX > EDGE) return;          // 只在左边缘热区生效
+  tracking = true; locked = null;
+  startX = e.clientX; startY = e.clientY;
+  page.style.transition = 'none';        // 跟手阶段关掉 transition
+});
+
+document.addEventListener('pointermove', (e) => {
+  if (!tracking) return;
+  const dx = e.clientX - startX, dy = e.clientY - startY;
+  if (!locked) {                          // 首次 move 判定意图：横 or 竖
+    if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+    locked = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+    if (locked === 'v') { tracking = false; return; }   // 竖向让给页面滚动
+  }
+  const progress = clamp(dx / innerWidth, 0, 1);
+  page.style.transform = `translateX(${progress * 100}%)`;
+  // 背后露出上一层：跟着 progress 变暗/缩放
+  underlay.style.transform = `translateX(${(progress - 1) * 30}%) scale(${0.92 + progress * 0.08})`;
+});
+
+document.addEventListener('pointerup', (e) => {
+  if (!tracking || locked !== 'h') return;
+  tracking = false;
+  const dx = e.clientX - startX;
+  const vx = dx / (performance.now() - t0);           // px/ms 速度
+  const commit = dx > innerWidth * 0.4 || vx > 0.5;    // 位移 40% 或快速轻扫
+  page.style.transition = 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)';
+  if (commit) {
+    page.style.transform = 'translateX(100%)';
+    page.addEventListener('transitionend', () => history.back(), { once: true });
+  } else {
+    page.style.transform = 'translateX(0)';
+  }
+});
+document.addEventListener('pointercancel', () => {    // 来电/系统手势中断
+  tracking = false;
+  page.style.transition = 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)';
+  page.style.transform = 'translateX(0)';
+});
+```
+
+```css
+.page {
+  position: fixed; inset: 0;
+  background: #fff;
+  box-shadow: -4px 0 24px rgba(0,0,0,0.18);   /* 页面右侧投影暗示层级 */
+  touch-action: pan-y;    /* 竖向交给原生滚动，横向归手势 */
+}
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| 边缘热区 | 20~28px | iOS 22px；太宽误触竖滑 |
+| 提交阈值 | 位移 >40% 宽 **或** 速度 >0.5 px/ms | 满足其一即提交；快速轻扫很短距离也能返回 |
+| 回弹/完成曲线 | `cubic-bezier(0.32, 0.72, 0, 1)` | iOS 标准「快进缓出」，0.3~0.35s |
+| 底层视差 | `translateX((p-1)*30%)` | 上层页拖出时底层从 -30% 跟进，制造景深 |
+| 拖拽阻尼 | progress = dx / width 直接 1:1 | 不要加阻尼——返回手势要完全跟手 |
+
+### 避坑
+- ❌ **跟手阶段开着 CSS transition** → 页面永远慢半拍，必须先 `transition: none`
+- ❌ **不锁方向** → 页面里有竖向滚动时，斜着滑就误触发返回；首次 move 判定 h/v 后锁定
+- ❌ **只按位移不按速度判定** → 用户快速轻扫 60px 没反应，觉得「失灵」
+- ❌ **忘记 `pointercancel`** → 来电/通知中心下拉中断后页面卡在半路
+- ❌ **commit 后直接 history.back()** → 过渡动画被页面卸载吃掉；等 `transitionend` 再退
+- ❌ 全屏热区（`pointerdown` 无边缘判断）→ 每次点按都开始拖页面，输入框没法用
+
+### 无障碍 fallback
+- 手势是**增强不是唯一入口**：左上角必须保留可见的返回按钮
+- `prefers-reduced-motion: reduce` 时直接 `history.back()` 无动画
+
+---
+
+## ㉘ Tab 滑动切换 Swipeable Tabs（跟手指示器）
+
+### 原理
+**内容区 = 原生横向 snap 滚动容器（㉖），指示器 = 一个绝对定位的滑块，`transform: translateX(scrollLeft / (w_content - w_view) * (w_track - w_thumb))` 用 scrollLeft 驱动**。内容靠原生滚动天然跟手 + 惯性，指示器用 JS 同步 —— 不用任何 transform 库就能做出「iOS 分段控制」的手感。
+
+### 适用模块
+- 手机端顶部 Tab（首页/发现/关注）
+- 分段控制（Segmented Control）
+- 全屏 Pager（Onboarding、 Stories）
+- 桌面 + 移动统一的 Tab 页
+
+### 不适用
+- ❌ Tab 数 > 6（横滑发现成本太高；改纵向抽屉导航）
+- ❌ Tab 内容含复杂表单（误滑切页丢输入状态）
+
+### 核心代码
+
+```html
+<nav class="tabs" role="tablist">
+  <div class="ink-track"><div class="ink" id="ink"></div></div>
+  <button role="tab" class="tab on">推荐</button>
+  <button role="tab" class="tab">关注</button>
+  <button role="tab" class="tab">视频</button>
+</nav>
+<div class="pages" id="pages">
+  <section class="page">…</section>
+  <section class="page">…</section>
+  <section class="page">…</section>
+</div>
+```
+
+```css
+.pages {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.pages::-webkit-scrollbar { display: none; }
+.page { flex: 0 0 100%; scroll-snap-align: center; }
+
+.tabs { position: relative; display: flex; }
+.ink {
+  position: absolute; bottom: 0; left: 0;
+  height: 3px; border-radius: 3px;
+  background: currentColor;
+  width: var(--tab-w);
+  will-change: transform;
+  transition: none;          /* 跟手阶段由 JS transform 驱动，不需要 transition */
+}
+```
+
+```javascript
+const pages = document.getElementById('pages');
+const ink = document.getElementById('ink');
+const tabs = [...document.querySelectorAll('.tab')];
+let ticking = false;
+
+pages.addEventListener('scroll', () => {
+  if (ticking) return;
+  ticking = true;
+  requestAnimationFrame(() => {
+    const max = pages.scrollWidth - pages.clientWidth;
+    const p = max ? pages.scrollLeft / max : 0;          // 0~1 全局进度
+    // 指示器 x = p * (指示器轨道宽 - 指示器宽)
+    ink.style.transform = `translateX(${p * inkTrackFree}px)`;
+    ticking = false;
+  });
+}, { passive: true });
+
+// 点击 Tab → 平滑滚动到对应页（与手势共用同一条轨道）
+tabs.forEach((t, i) => t.addEventListener('click', () => {
+  pages.scrollTo({ left: i * pages.clientWidth, behavior: 'smooth' });
+}));
+
+// scrollend 更新选中态（Chrome 114+；不支持则用 setTimeout 兜底）
+pages.addEventListener('scrollend', () => {
+  const i = Math.round(pages.scrollLeft / pages.clientWidth);
+  tabs.forEach((t, j) => t.classList.toggle('on', i === j));
+  tabs[i].focus({ preventScroll: true });
+});
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| 指示器动画 | 跟手无 transition；点 Tab 时靠 `scroll-behavior: smooth` | 指示器天然平滑，别再加 CSS transition 造成二次平滑 |
+| 指示器宽度 | Tab 平均宽或与文字等宽 | 与文字同宽更精致（需要 JS 量文字宽） |
+| scrollend 兜底 | 不支持时 `setTimeout(120ms)` 节流改选中态 | Safari 2024 年才支持 scrollend |
+| 页数上限 | ≤ 6 | 超过改纵向导航 |
+
+### 避坑
+- ❌ **用 JS transform 手写 Pager** → 丢惯性、丢原生滚动性能；snap 容器白送的
+- ❌ **指示器位置用 `left` 动画** → 每帧重排；必须 `transform: translateX`
+- ❌ **scroll 回调里改 Tab 选中态** → 滑动过程中高亮乱跳；选中态等 `scrollend`
+- ❌ **页面内竖向滚动 + 容器 `touch-action: none`** → 内容没法上下滚；容器不设 none，靠方向判定
+- ❌ **点击 Tab 用 `pages.scrollLeft = x` 赋值** → 瞬移没有平滑；用 `scrollTo({behavior:'smooth'})`
+- ❌ **Tab 宽度不定还用等分指示器** → 指示器和文字对不齐，廉价感来源第一名
+
+### 无障碍 fallback
+```css
+@media (prefers-reduced-motion: reduce) {
+  .pages { scroll-behavior: auto; scroll-snap-type: none; }
+}
+```
+- `role="tablist" / role="tab" / aria-selected` 完整语义；方向键切 Tab（`keydown` → scrollTo）
+
+---
+
+## ㉙ 页面推入/推出过渡 Push / Pop Transition
+
+### 原理
+**进入页从 `translateX(100%)` 滑入，退出页同步 `translateX(-25%)` 视差后退 + 变暗** —— 双层同动 + iOS 曲线 = 「原生导航」的体感。返回（pop）则镜像：进入页滑回右侧，上一页从 -25% 归位。关键是**两页同时动**，单页滑入的「廉价滑出」一眼假。
+
+### 适用模块
+- 手机 WebApp 路由切换（列表 → 详情）
+- 任何「层级关系」的页面切换（下钻）
+- 替代 `View Transitions` 在移动端路由的默认 fade
+
+### 不适用
+- ❌ 平级切换（Tab 间用 ㉘；模态用 ㉚）
+- ❌ 长内容页过渡时整页 blur（性能崩）
+
+### 核心代码
+
+```css
+:root { --ios-ease: cubic-bezier(0.32, 0.72, 0, 1); }
+
+.stack { position: relative; }
+.page {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  transition: transform 0.38s var(--ios-ease), filter 0.38s ease, opacity 0.38s ease;
+}
+.page.below {                 /* 被压在下层的页面 */
+  transform: translateX(-25%) scale(0.98);
+  filter: brightness(0.6);
+  pointer-events: none;
+  z-index: 1;
+}
+.page.top {                    /* 当前页 */
+  transform: translateX(0);
+  z-index: 2;
+}
+.page.entering {               /* push 进来的新页 */
+  z-index: 3;
+  animation: pushIn 0.38s var(--ios-ease) both;
+}
+.page.exiting {                /* 即将登场（被推出视口） */
+  animation: pushOut 0.38s var(--ios-ease) both;
+}
+@keyframes pushIn  { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes pushOut { from { transform: translateX(0);   } to { transform: translateX(-25%) scale(0.98); filter: brightness(0.6); } }
+```
+
+```javascript
+function push(newPageEl) {
+  const current = document.querySelector('.page.top');
+  current.classList.replace('top', 'exiting');
+  newPageEl.classList.add('entering');
+  newPageEl.addEventListener('animationend', () => {
+    current.classList.replace('exiting', 'below');
+    newPageEl.classList.replace('entering', 'top');
+  }, { once: true });
+}
+function pop() {   // 镜像
+  const top = document.querySelector('.page.top');
+  const below = document.querySelector('.page.below');
+  below.classList.add('exiting');                  // 反向动画
+  top.style.transform = 'translateX(100%)';
+  top.addEventListener('transitionend', () => {
+    top.remove();
+    below.classList.replace('exiting', 'top');     // below 的过渡回 0
+  }, { once: true });
+}
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| duration | 0.35~0.45s | iOS ≈ 0.35s；超过 0.5s 拖沓，低于 0.25s 看不清层级 |
+| 曲线 | `cubic-bezier(0.32, 0.72, 0, 1)` | iOS 导航曲线；终点前几乎匀速、无过冲（导航过渡不要 spring 过冲） |
+| 退出页位移 | -22%~-28% + 变暗 | 位移小于 15% 感知不到景深，大于 35% 抢戏 |
+| 层级数 | ≤ 3 | 每层都是 fixed DOM；超过 3 层内存/滚动位置管理复杂 |
+| 新页入场 | 大标题文字可加 ⑤ stagger 揭示 | 页面停在 0 后再开始，别同步 |
+
+### 避坑
+- ❌ **只有新页动、旧页静止** → 一眼 Web 味；双层同动是灵魂
+- ❌ **用 spring/elastic 做导航** → 过冲在层级切换里像 bug（参考 SKILL §7.2）
+- ❌ **过渡期间旧页还能点** → `pointer-events: none` 必须加
+- ❌ **返回后滚动位置丢失** → 页面用 `display:none` 而非 `remove()`；或记录 `scrollY` 恢复
+- ❌ **`100vh` 页面 + `position: fixed`** → 地址栏伸缩抖动；用 `100dvh`
+- ❌ **pop 方向做反（新页从左进）** → 下钻右进、返回右出，方向反了用户直接迷路
+
+### 无障碍 fallback
+```css
+@media (prefers-reduced-motion: reduce) {
+  .page { transition: none !important; animation: none !important; }
+  .page.below { display: none; }   /* 直接切，无层级视差 */
+}
+```
+
+### 与其他模式的关系
+- **vs ⑯ View Transitions**：⑮/⑯ 是通用共享元素/路由过渡；㉙ 是**移动端下钻导航专用**的双层 push/pop，语义更强
+- **vs ⑮ FLIP**：⑮ 强在「共享元素连续性」（卡片→详情）；㉙ 强在「层级方向感」。可组合：push 过渡中卡片本身用 FLIP
+- **必备搭档**：㉗ 滑动返回（手势可中断版的 pop）
+
+---
+
+## ㉚ 底部抽屉 Bottom Sheet（snap 点 + 拖拽收起）
+
+### 原理
+**抽屉有 2~3 个 snap 点（collapsed / half / full），拖 handle 跟手移动，松手按「最近的 snap 点 + 速度方向」二选一归位；backdrop 透明度与抽屉位置线性联动**。速度判定是灵魂：快速上滑直接飞到全屏，不用拖完全程。
+
+### 适用模块
+- 地图 App 的 POI 详情卡（经典）
+- 分享面板 / 操作菜单（ActionSheet 升级版）
+- 筛选器、评论列表
+- 音乐播放器迷你条 → 全屏
+
+### 不适用
+- ❌ 需要严格模态的表单（用户可能误收起；用居中 Modal）
+- ❌ 桌面端（用右侧 Drawer 或 Modal）
+
+### 核心代码
+
+```html
+<div class="sheet-backdrop" id="backdrop"></div>
+<div class="sheet" id="sheet">
+  <div class="handle" id="handle"><div class="grip"></div></div>
+  <div class="sheet-body">…内容…</div>
+</div>
+```
+
+```css
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  height: 75dvh;
+  border-radius: 20px 20px 0 0;
+  background: #fff;
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+  transform: translateY(100%);            /* 初始隐藏在屏幕下 */
+  transition: transform 0.42s cubic-bezier(0.32, 0.72, 0, 1);
+  touch-action: none;                      /* 拖拽面禁掉原生滚动 */
+  overscroll-behavior: contain;
+}
+.sheet.snap { transition: transform 0.42s cubic-bezier(0.32, 0.72, 0, 1); }
+.sheet.dragging { transition: none; }      /* 跟手阶段无动画 */
+.sheet-body { overflow-y: auto; touch-action: pan-y; }  /* 内容区恢复竖向滚动 */
+```
+
+```javascript
+const sheet = document.getElementById('sheet');
+const SNAP_POINTS = [                        // px，从抽屉顶部算
+  innerHeight - 64,                          // collapsed：只露 handle
+  innerHeight * 0.45,                        // half
+  0                                          // full
+];
+let startY = 0, startTop = 0, dragging = false, lastY = 0, lastT = 0, vy = 0;
+
+function currentTop() { return sheet.getBoundingClientRect().top; }
+
+handle.addEventListener('pointerdown', (e) => {
+  dragging = true; vy = 0;
+  startY = lastY = e.clientY; lastT = performance.now();
+  startTop = currentTop();
+  sheet.classList.add('dragging');
+  sheet.setPointerCapture(e.pointerId);
+});
+handle.addEventListener('pointermove', (e) => {
+  if (!dragging) return;
+  const dy = e.clientY - startY;
+  const now = performance.now();
+  vy = (e.clientY - lastY) / (now - lastT || 16);   // px/ms
+  lastY = e.clientY; lastT = now;
+  let top = startTop + dy;
+  top = clamp(top, 0, SNAP_POINTS[0]);              // 不许拖出边界
+  sheet.style.transform = `translateY(${top - innerHeight}px)`;
+  backdrop.style.opacity = String(1 - top / SNAP_POINTS[0]);  // backdrop 联动
+});
+handle.addEventListener('pointerup', () => {
+  dragging = false;
+  sheet.classList.remove('dragging');
+  const top = currentTop();
+  let target;
+  if (Math.abs(vy) > 0.5) {                          // 快速甩：方向说了算
+    target = vy < 0 ? nearestAbove(top) : nearestBelow(top);
+  } else {
+    target = SNAP_POINTS.reduce((a, b) =>           // 慢速：就近吸附
+      Math.abs(b - top) < Math.abs(a - top) ? b : a);
+  }
+  if (target >= SNAP_POINTS[0]) closeSheet();       // 拖到底 = 关
+  else snapTo(target);
+});
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| snap 点数 | 2~3 | collapsed / half / full；4 个点用户记不住 |
+| 甩动阈值 | \|vy\| > 0.5 px/ms | 快速轻甩直达目标；慢拖就近吸附 |
+| snap 曲线 | `cubic-bezier(0.32, 0.72, 0, 1)` 0.4s | 同 ㉙ 导航曲线，整 App 手感统一 |
+| handle 热区 | 高度 ≥ 44px | 可见 grip 条 36×5px，但热区给足 |
+| backdrop 联动 | opacity = 1 - progress | 抽屉拖低时背景渐透，暗示「可以关了」 |
+
+### 避坑
+- ❌ **handle 用 click 展开 / 无跟手拖拽** → 手感直接掉到 H5 水平；跟手是底线
+- ❌ **整个 sheet 设 `touch-action: none`** → 内容区没法竖向滚动；只有 handle 区禁掉
+- ❌ **内容区滚到顶后继续上拖没接管** → 顶部 edge-overscroll 应转为收起抽屉（监听 body scrollTop===0 时的 touchmove 向下）
+- ❌ **只按位置吸附不看速度** → 快速上滑 100px 停在原地，用户觉得「没反应」
+- ❌ **backdrop 固定不透明** → 抽屉拖低时背景还是全黑，没有「正在关闭」的反馈
+- ❌ **忘 `pointercancel`** → 系统手势中断后抽屉悬在半空
+
+### 无障碍 fallback
+- handle 同时是 `<button>`（键盘 Esc 关闭 + focus trap）；`role="dialog" aria-modal="true"`
+- `prefers-reduced-motion`：snap 改 `transition: none`，直接跳位
+
+---
+
+## ㉛ 列表项滑动操作 Swipe Actions（滑动显露按钮）
+
+### 原理
+**行内容层 `translateX(dx)` 跟手、操作按钮层垫在下面（右侧露出删除/置顶）**。松手：超过阈值 → 按钮展开态吸附；否则回弹关闭。已有展开行时，触摸其他行先收起它（互斥）。
+
+### 适用模块
+- 消息列表（删除/置顶/已读）
+- 待办清单（完成/删除）
+- 购物车（移入收藏/删除）
+
+### 不适用
+- ❌ 操作 > 3 个的行（塞不下；长按出菜单 ㉜）
+- ❌ 桌面端列表（hover 直接给按钮，别让鼠标用户做滑动）
+- ❌ 行内有横向元素的（图片轮播）—— 手势打架
+
+### 核心代码
+
+```html
+<li class="row">
+  <div class="actions">
+    <button class="act pin">置顶</button>
+    <button class="act del">删除</button>
+  </div>
+  <div class="row-content">…</div>   <!-- 滑动层 -->
+</li>
+```
+
+```css
+.row { position: relative; overflow: hidden; }
+.actions {
+  position: absolute; inset: 0;
+  display: flex; justify-content: flex-end;
+}
+.act { width: 76px; }
+.row-content {
+  position: relative;
+  background: #fff;
+  touch-action: pan-y;               /* 竖向滚动不受影响 */
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.row-content.dragging { transition: none; }
+```
+
+```javascript
+const OPEN_W = -152;                  // 两按钮总宽（负 = 向左）
+let row = null, startX = 0, startTX = 0, locked = null;
+
+list.addEventListener('pointerdown', (e) => {
+  row = e.target.closest('.row-content');
+  if (!row) return;
+  startX = e.clientX; startTX = getTX(row); locked = null;
+  // 互斥：按到别的行时，收起已展开的行
+  document.querySelectorAll('.row-content.open').forEach(r => {
+    if (r !== row) closeRow(r);
+  });
+});
+
+list.addEventListener('pointermove', (e) => {
+  if (!row) return;
+  const dx = e.clientX - startX;
+  if (!locked) {
+    if (Math.abs(dx) < 8) return;
+    if (Math.abs(e.clientY - startY) > Math.abs(dx)) { row = null; return; } // 竖向让行
+    locked = 'h';
+    row.classList.add('dragging');
+  }
+  let tx = startTX + dx;
+  if (tx > 0) tx = tx / 4;            // 右侧无按钮：加阻尼，可感知边界
+  tx = clamp(tx, OPEN_W * 1.15, 0);   // 左侧最多多拖 15% 弹性余量
+  row.style.transform = `translateX(${tx}px)`;
+});
+
+list.addEventListener('pointerup', (e) => {
+  if (!row || locked !== 'h') { row = null; return; }
+  const tx = getTX(row);
+  row.classList.remove('dragging');
+  if (tx < OPEN_W * 0.5) openRow(row);   // 过半展开
+  else closeRow(row);
+  row = null;
+});
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| 按钮宽 | 68~80px/个 | 单指拇指热区；2 个为宜，最多 3 |
+| 展开阈值 | 露出 >50% 或轻甩 | 同 ㉗，速度 + 位移双判定更顺 |
+| 右侧橡皮筋 | dx/4 阻尼 | 告诉用户「这边没有操作」，比硬卡死高级 |
+| 动画 | 0.3s iOS 曲线 | 展开时按钮依次淡入（stagger 30ms）更精致 |
+
+### 避坑
+- ❌ **全宽一步到位（点按出按钮）** → 失去「物理感」；必须跟手
+- ❌ **不互斥（多行同时展开）** → 界面乱；新触摸先收其他行
+- ❌ **滑动中列表还能竖滚** → 方向判定 + 锁定（同 ㉗）
+- ❌ **展开态滚出屏幕** → 该行滚出视口时自动收起（IntersectionObserver）
+- ❌ **删除没有撤销** → 误滑删除无法挽回；Toast + 撤销 5s
+- ❌ **行内容层 `touch-action: none`** → 列表没法竖向滚；用 pan-y + 方向锁
+
+### 无障碍 fallback
+- 每行**必须有可见的替代操作入口**（长按菜单或行尾 ⋯ 按钮）；手势是加速器不是唯一路径
+- `aria-hidden` 垫底按钮在收起时不可聚焦；展开时才进 tab 顺序
+
+---
+
+## ㉜ 触感反馈 + 按压缩放 Haptics & Press Feedback
+
+### 原理
+**视觉压缩（scale 0.96~0.98）+ 触觉脉冲（`navigator.vibrate`）+ 听觉静音默认** 三通道里的前两个。Android Chrome 支持 Web Vibration API；iOS Safari 不支持（WKWebView / 原生壳里可用 HapticEngine）。降级链：原生触感 → 视觉压缩 → 纯色变。
+
+### 适用模块
+- 所有移动端主操作按钮（CTA、发送、支付）
+- 滑动翻页卡到 snap 点的瞬间（㉖⑳配合）
+- ㉛ 删除确认、㉚ snap 吸附瞬间
+- 长按呼出菜单（long-press 500ms + scale 1.02 放大 + 触感）
+
+### 不适用
+- ❌ 每次列表滚动都震（骚扰）
+- ❌ 桌面端 vibrate 无意义（只保留 scale）
+- ❌ 失败/错误时震（负面触感留给系统通知）
+
+### 核心代码
+
+```css
+/* —— 按压缩放：active 态，零 JS —— */
+.press {
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);  /* 回弹带一点过冲 */
+  touch-action: manipulation;   /* 消除 300ms 双击缩放延迟 */
+  -webkit-tap-highlight-color: transparent;  /* 去掉 Android 灰色高亮块 */
+}
+.press:active { transform: scale(0.96); }
+.press:active .press-icon { transform: scale(0.88); }  /* 图标比容器缩更多 = 呼吸层次 */
+```
+
+```javascript
+/* —— 触感模式表：不同语义用不同波形，别全用同一种 —— */
+const HAPTIC = {
+  tap:      8,               // 轻点确认：主按钮按下
+  success:  [16, 40, 24],    // 成功：双脉冲（保存成功/发送完成）
+  warn:     [10, 60, 10, 60, 10],  // 警告：三连震（删除/不可用）
+  snap:     4,               // snap 吸附瞬间：极轻（翻页/指示器到站）
+};
+function haptic(type = 'tap') {
+  if (!navigator.vibrate) return;         // iOS Safari：静默降级
+  navigator.vibrate(HAPTIC[type]);
+}
+```
+
+```javascript
+/* —— 长按菜单（500ms + 松手前放大） —— */
+let lpTimer = null, pressed = null;
+list.addEventListener('pointerdown', (e) => {
+  const card = e.target.closest('.longpress');
+  if (!card) return;
+  pressed = card;
+  lpTimer = setTimeout(() => {
+    haptic('warn');
+    card.style.transform = 'scale(1.03)';     // 轻微放大 = 已激活
+    card.classList.add('menu-open');           // 弹出上下文菜单
+  }, 500);
+});
+['pointerup', 'pointercancel', 'pointerleave'].forEach(ev =>
+  list.addEventListener(ev, () => clearTimeout(lpTimer)));
+```
+
+### 触感时机 × 波形速查
+
+| 时机 | 波形 | 时长 |
+|------|------|------|
+| 主按钮按下 | tap（单脉冲 8ms） | 即时 |
+| snap 到位 / 翻页停住 | snap（4ms 极轻） | 吸附瞬间 |
+| 操作成功 | success 双脉冲 | 完成 callback 里 |
+| 删除 / 不可用 | warn 三连震 | 拦截时 |
+| 长按激活 | warn | 满 500ms 时 |
+
+### 避坑
+- ❌ **高频震动**（滚动每行震一次）→ 蜂鸣器既视感 + 耗电；只在「状态改变」的瞬间震
+- ❌ **scale 压缩 < 0.94** → 像坏掉；0.96~0.97 是甜区
+- ❌ **只做 scale 不改颜色** → 有色盲/强光下感知不到；scale + 色变双通道
+- ❌ **`vibrate(100)` 长震做按钮反馈** → 像来电；交互触感一律 ≤ 20ms
+- ❌ **长按没给视觉反馈** → 用户不知道按住有没有效果；500ms 时放大 + 触感同时给
+- ❌ 忘 `-webkit-tap-highlight-color: transparent` → Android 灰块 + 压缩动画双层叠加很脏
+
+### 无障碍 fallback
+- 触感 + scale 都是增强；状态改变必须有文字/颜色变化（三冗余原则）
+- `prefers-reduced-motion: reduce` 时去掉 scale 动画只保留即时色变
+
+---
+
+## ㉝ 橡皮筋阻尼 Rubber-Band Overscroll
+
+### 原理
+**内容滚到顶（`scrollTop ≤ 0`）还继续下拉时，位移按阻尼公式 `pull = 150 * (1 - 1/(dx/150 + 1))` 映射** —— 手指拖 300px 内容只移 ~100px，且越拉越费劲；松手 spring 回弹。这是 iOS 手感的标志性细节，Web 端要自己实现（原生只在 body 上有 rubber band，内部容器没有）。
+
+> 与 ㊲ 下拉刷新的区别：㉝ 只做「拉扯 + 回弹」的视觉阻尼；㊲ 是完整刷新流程（spinner + 触发 + 成功态）。做刷新就把 ㊲ 里的阻尼公式换成 ㉝ 这条。
+
+### 适用模块
+- 内部滚动容器（聊天窗、评论区）滚到顶继续下拉的回弹
+- 自绘 canvas 列表（无原生滚动可用）
+- 配合 ㊱ 拖拽排序（列表顶部/底部拖动时让出空间）
+
+### 不适用
+- ❌ body 本身（原生 iOS 自带 rubber band，别重复实现）
+- ❌ 加了 `overscroll-behavior: contain` 后还想让页面跟着弹
+
+### 核心代码
+
+```javascript
+// 在内部滚动容器上实现橡皮筋（仅顶部示例；底部对称）
+const scroller = document.querySelector('.scroller');
+const inner = scroller.querySelector('.scroller-inner');   // 需要一层 inner 做位移
+let rubber = null;   // { startY, active }
+
+const RUBBER_C = 150;                       // 阻尼常数：越小越「紧」
+
+function rubberDamp(dx) {                   // 1 - 1/(x/c + 1)：位移越大增益越小
+  return RUBBER_C * (1 - 1 / (Math.abs(dx) / RUBBER_C + 1));
+}
+
+scroller.addEventListener('pointerdown', (e) => {
+  if (scroller.scrollTop <= 0) rubber = { startY: e.clientY, active: false };
+});
+scroller.addEventListener('pointermove', (e) => {
+  if (!rubber) return;
+  const dy = e.clientY - rubber.startY;
+  if (dy <= 0) { rubber = null; return; }              // 向上滑交还原生滚动
+  if (!rubber.active) {
+    if (scroller.scrollTop > 0) return;               // 已被原生滚走，放手
+    rubber.active = true;
+    inner.style.transition = 'none';
+  }
+  e.preventDefault();                                  // 到顶了才拦截
+  inner.style.transform = 'translateY(' + rubberDamp(dy) + 'px)';
+});
+function releaseRubber() {
+  if (!rubber?.active) { rubber = null; return; }
+  rubber = null;
+  inner.style.transition = 'transform .5s cubic-bezier(0.175, 0.885, 0.32, 1.2)';  // 带一点回弹过冲
+  inner.style.transform = 'translateY(0)';
+}
+scroller.addEventListener('pointerup', releaseRubber);
+scroller.addEventListener('pointercancel', releaseRubber);
+```
+
+```css
+.scroller { overflow-y: auto; overscroll-behavior-y: contain; touch-action: pan-y; }
+.scroller-inner { will-change: transform; }   /* 只有它动，不引起重排 */
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| 阻尼常数 C | 120~180 | iOS ≈ 150；越小回弹感越「紧实」，越大越「松」 |
+| 回弹曲线 | `cubic-bezier(0.175, 0.885, 0.32, 1.2)` | 尾端轻微过冲 = 果冻感 |
+| 回弹时长 | 0.45~0.6s | 太快像弹片，太慢像掉进棉花 |
+
+### 避坑
+- ❌ **1:1 跟手下拉** → 没有「拉不动」的重量感；阻尼公式才是灵魂
+- ❌ **没到顶就 preventDefault** → 正常滚动全被劫持；必须 `scrollTop <= 0` 才接管
+- ❌ **move 里查 scrollTop 但用了缓存值** → 边滚边拉状态错乱；每次实时读
+- ❌ **回弹用 spring 循环手写** → 纯回弹用 CSS 曲线足够，rAF 循环浪费电
+- ❌ **双层 padding 拉伸替代 transform** → 重排；只 transform inner
+
+### 无障碍 fallback
+```css
+@media (prefers-reduced-motion: reduce) {
+  .scroller-inner { transition: none !important; }
+}
+```
+- 手感细节非信息承载，reduced-motion 下直接无动画回位即可
+
+---
+
+## ㉞ 捏合缩放 Pinch-to-Zoom（双指手势）
+
+### 原理
+**Pointer Events 记录两个指针：`scale = 当前两指距离 / 起始距离 × baseScale`，`transform-origin` 锁定在双指起点**。松手时 scale < 1 弹回 1（不许缩没），scale 超过 1.8x 吸附到全屏预览。pivot 计算是精髓 —— 缩放永远围绕手指起点，而不是元素中心。
+
+### 适用模块
+- 图片查看器（IM 聊天图片、相册）
+- 地图 / 白板画布
+- 卡片详情（pinch 放大进入全屏阅读）
+
+### 不适用
+- ❌ 普通文本内容页（系统双击缩放已够用）
+- ❌ 列表页（pinch 会误伤滚动；只在全屏 viewer 里开）
+
+### 核心代码
+
+```javascript
+const img = document.getElementById('zoomImg');
+const pointers = new Map();          // pointerId → {x, y}
+let pinch = null;                   // { dist0, scale0, cx, cy }
+let scale = 1, tx = 0, ty = 0;
+
+function dist(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+stage.addEventListener('pointerdown', (e) => {
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 2) {
+    const [a, b] = pointers.values();
+    // pivot：双指起点的中点 —— transform-origin 的锚
+    const rect = img.getBoundingClientRect();
+    const cx = (a.x + b.x) / 2 - rect.left, cy = (a.y + b.y) / 2 - rect.top;
+    pinch = { dist0: dist(a, b) || 1, scale0: scale,
+              ox: (cx / rect.width * 100).toFixed(1) + '% ' + (cy / rect.height * 100).toFixed(1) + '%' };
+    img.style.transition = 'none';
+    img.style.transformOrigin = pinch.ox;
+    stage.setPointerCapture(e.pointerId);
+  }
+});
+stage.addEventListener('pointermove', (e) => {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size !== 2 || !pinch) return;
+  const [a, b] = pointers.values();
+  scale = clamp(pinch.scale0 * dist(a, b) / pinch.dist0, 0.4, 3);
+  img.style.transform = `scale(${scale})`;
+});
+function endPinch(e) {
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2 && pinch) {
+    pinch = null;
+    img.style.transition = 'transform .35s cubic-bezier(0.32, 0.72, 0, 1)';
+    if (scale < 1) { scale = 1; img.style.transform = 'scale(1)'; haptic('snap'); }      // 缩没 → 弹回
+    else if (scale > 1.8) { scale = 2.4; img.style.transform = 'scale(2.4)'; haptic('snap'); }  // 过全屏阈值 → 吸附
+  }
+}
+stage.addEventListener('pointerup', endPinch);
+stage.addEventListener('pointercancel', endPinch);
+
+// 双击 toggle 0.25s 内两次 tap
+let lastTap = 0;
+stage.addEventListener('pointerdown', (e) => {
+  const now = performance.now();
+  if (pointers.size === 1 && now - lastTap < 250) {
+    const target = scale > 1.1 ? 1 : 2;             // 放大态双击回 1
+    scale = target;
+    img.style.transition = 'transform .3s cubic-bezier(0.32, 0.72, 0, 1)';
+    img.style.transform = `scale(${target})`;
+    haptic('snap');
+  }
+  lastTap = now;
+});
+```
+
+```css
+.zoom-stage { touch-action: none; }   /* 双指区禁掉原生缩放/滚动，全权接管 */
+.zoom-img { will-change: transform; transform-origin: center; }
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| scale 边界 | 0.4 ~ 3 | 拖拽期放宽到 0.4，给「过度缩放」的物理感；松手才吸附 |
+| 回弹阈值 | scale < 1 | 缩到 1 以下松手必弹回 |
+| 放大吸附 | scale > 1.8 → 2.4 | 「放大到全屏」的语义点，用吸附而非自由停 |
+| 双击窗口 | 250ms | 比系统 dblclick 快，避免触发浏览器双击缩放 |
+| stage | `touch-action: none` | 必须显式声明，否则浏览器抢双指 |
+
+### 避坑
+- ❌ **transform-origin 固定 center** → 缩放围绕中心转，手指位置「漂移」，一眼假
+- ❌ **pointerup 只清一个指针就退出 pinch** → `pointers.size < 2` 才算结束
+- ❌ **拖拽期就 clamp 死 1~2.5** → 失去「过度缩放」手感；边界放宽、松手吸附
+- ❌ **不 setPointerCapture** → 手指出 stage 后指针丢失，缩放卡死
+- ❌ **图片层单独监听且没阻止冒泡** → 与单指拖动 pan 打架
+
+### 无障碍 fallback
+- 必须提供「+/−」缩放按钮（键盘/读屏可达）；pinch 是增强
+- 双击 / 按钮路径在 reduced-motion 下即时跳变无动画
+
+---
+
+## ㉟ 坍缩头图 Collapsing Header（Stretch + Shrink 双态）
+
+### 原理
+**下拉时（scrollTop < 0 不可滚），头图按 `scale = 1 + overscroll/300` 放大 + origin bottom 锚定（stretch 拉伸感）；上滚时，头部按滚动进度 `translateY(scrollTop * 0.5) + 收敛高度`（视差 + 收缩）**。全程只读 scroll 事件 + transform，不劫持滚动 —— 这是最容易被做成掉帧灾难又最容易做对的模式。
+
+### 适用模块
+- 个人主页（头像 + 大横幅，Twitter/小红书风）
+- 商品详情页（头图 + 吸顶导航）
+- 音乐 App 正在播放页
+
+### 不适用
+- ❌ 头图与正文信息强关联的阅读页（视差会误导阅读位置）
+- ❌ 无大图的纯工具页（没有 stretch 的必要）
+
+### 核心代码
+
+```html
+<header class="hero">
+  <div class="hero-img" id="heroImg"></div>
+  <div class="hero-bar" id="heroBar"><b>个人主页</b></div>
+</header>
+<main class="feed">…</main>
+```
+
+```css
+.hero { position: relative; height: 220px; }
+.hero-img {
+  position: absolute; inset: 0;
+  transform-origin: 50% 100%;        /* 关键：底边锚定，下拉时往上长 */
+  background: linear-gradient(135deg, #4c6ef5, #845ef7);
+  will-change: transform;
+}
+.hero-bar {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 10px 16px;
+  background: rgba(0,0,0,.35); backdrop-filter: blur(10px);
+  color: #fff; font-size: 16px;
+  will-change: transform, opacity;
+}
+```
+
+```javascript
+const heroImg = document.getElementById('heroImg');
+const heroBar = document.getElementById('heroBar');
+const HERO_H = 220;
+let ticking = false;
+
+window.addEventListener('scroll', () => {
+  if (ticking) return;
+  ticking = true;
+  requestAnimationFrame(() => {
+    const y = window.scrollY;                 // 往下滚 y > 0；iOS 顶部下拉 y < 0
+    if (y <= 0) {
+      // stretch：下拉放大（阻尼后），bar 淡出
+      heroImg.style.transform = `scale(${1 + Math.min(-y, 300) / 300 * 0.35})`;
+      heroBar.style.opacity = String(clamp(1 + y / 80, 0, 1));
+    } else {
+      // shrink：上滚时头图视差（半速）+ bar 沿头图底边上移直到吸顶
+      const p = clamp(y / HERO_H, 0, 1);      // 0~1 收敛进度
+      heroImg.style.transform = `translateY(${y * 0.5}px) scale(${1 + (1 - p) * 0})`;
+      heroBar.style.transform = `translateY(${y * 0.5}px)`;   // 与头图同半速 → 视差
+      heroBar.style.opacity = '1';
+      // 吸顶后切换成 sticky 导航（透明度/高度随 p 收敛）
+      heroBar.style.height = `${56 - p * 8}px`;
+    }
+    ticking = false;
+  });
+}, { passive: true });
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| stretch 上限 | +0.35 scale | 下拉 300px 封顶放大 1.35x；再多没意义 |
+| 视差速度 | 0.5×（头图半速） | 头图滚得比正文慢 → 深度感 |
+| bar 收敛 | 高度 -8px + 字号 -1px | 保守；shrink 剧烈会闪 |
+| 吸顶点 | `p = 1`（滚过 HERO_H） | 换成固定导航，bar 退出 |
+
+### 避坑
+- ❌ **scroll 回调里同步读布局又写布局** → 强制同步布局抖动；只写 transform + rAF 节流
+- ❌ **stretch 改 height/paddingTop** → 重排；只 `scale` + `origin: bottom`
+- ❌ **下拉放大 origin 在 center** → 头图上下都长，底部露缝；必须底边锚定
+- ❌ **bar 视差速度 ≠ 头图视差速度** → bar 和图分离漂移，穿帮
+- ❌ **把 scroll 设 `{passive: false}`** → 本模式只读不拦，passive true 保性能
+
+### 无障碍 fallback
+```css
+@media (prefers-reduced-motion: reduce) {
+  .hero-img, .hero-bar { transform: none !important; }
+}
+```
+- stretch/视差纯装饰，直接关；吸顶导航功能保留（无动画跳变）
+
+---
+
+## ㊱ 长按拖拽排序 Drag-to-Reorder
+
+### 原理
+**长按 300ms 触发「浮起」（scale 1.05 + 阴影 + 触感）→ 该行 absolute 跟手 → 其余行按「目标 index 与当前 index 的差」用 transform 平滑让位 → pointerup 落位结算**。精髓是让位动画用「按 index 差 translateY(rowHeight)」，拖动经过即换 index，行像水一样分开。
+
+### 适用模块
+- 歌单排序、收藏夹整理
+- 看板列内卡片排序
+- 表单字段排序
+
+### 不适用
+- ❌ 长列表（> 30 项，拖到目标位置太久；改数字输入序号）
+- ❌ 桌面端（直接给上/下移动按钮，鼠标长按反人类）
+
+### 核心代码
+
+```javascript
+const list = document.getElementById('reorderList');
+const rows = Array.from(list.children);
+const ROW_H = 64;                       // 行高（含 margin）
+let drag = null;                         // { row, idx, ghost, startY }
+
+list.addEventListener('pointerdown', (e) => {
+  const row = e.target.closest('.rrow');
+  if (!row) return;
+  drag = { row, idx: rows.indexOf(row), startY: e.clientY, moved: false, timer: null };
+  drag.timer = setTimeout(() => liftRow(e.clientY), 300);   // 长按 300ms 才浮起
+});
+
+function liftRow(y) {
+  if (!drag) return;
+  drag.moved = true;
+  drag.row.setPointerCapture?.(lastPointerId);
+  drag.row.classList.add('lifted');      // scale(1.05) + 大阴影 + 半透明 + haptic
+  haptic('warn');
+  // 浮起后该行 absolute 化，同时留一个 ghost 占位（或 width:100% placeholder）
+  const rect = drag.row.getBoundingClientRect();
+  drag.startTop = rect.top; drag.offsetY = y - rect.top;
+  drag.row.style.width = rect.width + 'px';
+  drag.row.style.position = 'absolute';
+  drag.row.style.top = (drag.startTop - list.getBoundingClientRect().top) + 'px';
+  drag.row.style.zIndex = 10;
+  rows.forEach(r => { if (r !== drag.row) r.style.transition = 'transform .25s var(--ios-ease)'; });
+}
+
+list.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  if (!drag.moved) {
+    // 未浮起：移动超过 10px = 想滚动，取消长按
+    if (Math.abs(e.clientY - drag.startY) > 10) { clearTimeout(drag.timer); drag = null; }
+    return;
+  }
+  e.preventDefault();
+  const dy = e.clientY - drag.startY;
+  drag.row.style.transform = `translateY(${dy}px) scale(1.05)`;
+  // 换 index：拖过行高一半即换
+  const shift = Math.round((drag.row.getBoundingClientRect().top + 32 - drag.startTop) / ROW_H);
+  const newIdx = clamp(drag.idx + shift, 0, rows.length - 1);
+  if (newIdx !== drag.idx) {
+    moveVisual(drag.idx, newIdx);
+    drag.idx = newIdx;
+    haptic('snap');                      // 每次换位轻震一次 —— 「咔哒」到位感
+  }
+});
+
+function moveVisual(from, to) {
+  // 让位：from→to 之间的行按方向 translateY(±ROW_H)
+  rows.forEach((r, i) => {
+    if (r === drag.row) return;
+    let pos = i;
+    if (from < to && i > from && i <= to) pos = i - 1;
+    else if (from > to && i < from && i >= to) pos = i + 1;
+    r.dataset.pos = pos;
+    r.style.transform = pos !== rows.indexOf(r) ? `translateY(${(pos - rows.indexOf(r)) * ROW_H}px)` : '';
+  });
+}
+
+list.addEventListener('pointerup', () => {
+  if (!drag) return;
+  clearTimeout(drag.timer);
+  if (!drag.moved) { drag = null; return; }
+  const { row, idx } = drag;
+  // 结算：DOM 真实重排 + 复位样式
+  rows.splice(rows.indexOf(row), 1);
+  rows.splice(idx, 0, row);
+  row.style.transition = 'transform .25s var(--ios-ease), top .25s var(--ios-ease)';
+  row.style.transform = '';
+  requestAnimationFrame(() => {
+    // 依次复位所有行样式，再 appendChild 按新顺序
+    rows.forEach(r => { r.style.transform = ''; r.style.transition = ''; });
+    rows.forEach(r => list.appendChild(r));
+    setTimeout(() => {
+      row.style.position = ''; row.style.top = ''; row.style.width = ''; row.style.zIndex = '';
+      row.classList.remove('lifted');
+    }, 260);
+  });
+  haptic('success');
+  drag = null;
+});
+list.addEventListener('pointercancel', () => {
+  if (drag?.moved) { /* 同 pointerup 的结算 */ }
+  clearTimeout(drag?.timer); drag = null;
+});
+```
+
+```css
+.rrow { background: var(--panel-2); border-radius: 12px; height: 64px; margin-bottom: 0; }
+.rrow.lifted {
+  background: #2a2e3f;
+  box-shadow: 0 12px 32px rgba(0,0,0,.5);
+  opacity: .92;
+  touch-action: none;
+}
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| 长按时长 | 280~350ms | 短于 250 会和滚动打架，长于 400 等得心焦 |
+| 浮起幅度 | scale 1.04~1.06 | 太小不像「拿起来」，太大遮挡邻行 |
+| 让位动画 | 0.22~0.3s iOS 曲线 | 拖动经过时水流感 |
+| 换位阈值 | 拖过行高一半 | 换位瞬间 snap 触感 = 「咔哒」 |
+| 滚动接驳 | 行到视口边 80px 时启动 8px/frame 自动滚 | 长列表必需 |
+
+### 避坑
+- ❌ **点按立即浮起** → 和滚动/点击无法区分；必须长按门槛
+- ❌ **让位用 insertBefore 实时改 DOM** → 每次换位整表重排；让位只动 transform，松手才结算 DOM
+- ❌ **行高不固定** → ROW_H 计算 ω 错位；行高不一致时先量 `getBoundingClientRect`
+- ❌ **换位无触感** → 静默换位感知弱；snap 轻震 + 让位动画双反馈
+- ❌ **没处理 pointercancel** → 来电中断后行悬在半空
+
+### 无障碍 fallback
+- 必须提供「上移/下移」按钮或序号编辑（读屏 + 键盘可达）；拖拽是增强
+- reduced-motion：浮起/让位动画关，即时重排
+
+---
+
+## ㊲ 完整下拉刷新 Pull-to-Refresh（跟手流程组件）
+
+### 原理
+**scrollTop = 0 且继续下拉 → spinner 随阻尼位移出现并按比例旋转 → 超过阈值（80px）箭头/文案切换「松手刷新」→ 松手：吸到 loading 位自转 0.8s → 完成态打勾 → 自动收起**。阻尼公式同 ㉝；与 ㉝ 的分工：㉝ 管「拉扯手感」，㊲ 管「完整状态机」。
+
+### 适用模块
+- 任何移动端信息流 / 列表页顶部
+- 小程序自定义下拉（配合 wx.enablePullDownRefresh 关掉系统版）
+
+### 不适用
+- ❌ 非首屏列表（内部嵌套容器别放刷新；刷新语义属于「整页」）
+- ❌ 桌面端（用刷新按钮；鼠标没有下拉心智）
+
+### 核心代码
+
+```html
+<div class="ptr-zone" id="ptrZone">
+  <div class="ptr-indicator" id="ptrIndicator">
+    <div class="ptr-spinner" id="ptrSpinner"></div>
+    <span class="ptr-label" id="ptrLabel">下拉刷新</span>
+  </div>
+  <div class="ptr-content" id="ptrContent">…列表内容…</div>
+</div>
+```
+
+```css
+.ptr-zone { position: relative; overflow-y: auto; overscroll-behavior-y: contain; }
+.ptr-indicator {
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 72px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transform: translateY(-100%);
+}
+.ptr-spinner {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2.5px solid rgba(255,255,255,.15);
+  border-top-color: var(--accent);
+}
+.ptr-spinner.done { border-color: var(--ok); border-top-color: var(--ok); }  /* 完成态整体变 ✓ 色圆 */
+```
+
+```javascript
+const TRIGGER = 80, LOADING_HOLD = 60;   // 触发阈值 / loading 吸附位
+let ptr = null, state = 'idle';          // idle | pulling | loading | done
+
+function damp(d) { return 130 * (1 - 1 / (d / 130 + 1)); }   // 同 ㉝
+
+ptrZone.addEventListener('pointerdown', (e) => {
+  if (ptrZone.scrollTop <= 0 && state === 'idle') ptr = { y0: e.clientY };
+});
+ptrZone.addEventListener('pointermove', (e) => {
+  if (!ptr) return;
+  const d = e.clientY - ptr.y0;
+  if (d <= 0 || ptrZone.scrollTop > 0) { ptr = null; resetIdle(); return; }
+  state = 'pulling';
+  e.preventDefault();
+  const pull = damp(d);
+  ptrContent.style.transition = 'none';
+  ptrContent.style.transform = `translateY(${pull}px)`;
+  ptrIndicator.style.transform = `translateY(${-100 + clamp(pull, 0, 100)}%)`;
+  ptrSpinner.style.transform = `rotate(${pull * 3}deg)`;      // 跟手旋转 3°/px
+  ptrLabel.textContent = pull > TRIGGER ? '松开刷新' : '下拉刷新';
+});
+ptrZone.addEventListener('pointerup', () => {
+  if (!ptr) return;
+  const pull = getPull();
+  ptr = null;
+  if (pull > TRIGGER) startLoading();
+  else snapBack();
+});
+
+function snapBack() {
+  ptrContent.style.transition = 'transform .45s cubic-bezier(0.32, 0.72, 0, 1)';
+  ptrContent.style.transform = 'translateY(0)';
+  ptrIndicator.style.transition = 'transform .45s cubic-bezier(0.32, 0.72, 0, 1)';
+  ptrIndicator.style.transform = 'translateY(-100%)';
+  setTimeout(resetIdle, 460);
+}
+function startLoading() {
+  state = 'loading';
+  haptic('tap');
+  ptrContent.style.transition = 'transform .35s cubic-bezier(0.32, 0.72, 0, 1)';
+  ptrContent.style.transform = `translateY(${LOADING_HOLD}px)`;
+  ptrIndicator.style.transition = 'transform .35s cubic-bezier(0.32, 0.72, 0, 1)';
+  ptrIndicator.style.transform = 'translateY(${-100 + 60}px)';  // 吸到 loading 位
+  ptrSpinner.style.animation = 'spin 0.8s linear infinite';
+  ptrLabel.textContent = '刷新中…';
+  // 实际请求：fetch(...).finally(finishRefresh)
+  setTimeout(finishRefresh, 900);
+}
+function finishRefresh() {
+  state = 'done';
+  ptrSpinner.style.animation = 'none';
+  ptrSpinner.classList.add('done');
+  ptrLabel.textContent = '已更新';
+  haptic('success');
+  setTimeout(snapBack, 500);      // 打勾停留 500ms 再收起
+}
+function resetIdle() { state = 'idle'; ptrSpinner.classList.remove('done'); }
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| 触发阈值 | 80~96px（阻尼前） | iOS ≈ 80；阻尼后实际位移 ≈ 55px |
+| spinner 跟手转速 | 2~3°/px | 转太慢「没在转」，太快晕 |
+| loading 吸附位 | 56~64px | spinner 完整露出 + 一点呼吸空间 |
+| 完成态停留 | 400~600ms | 打勾要给看清的时间 |
+| 阻尼常数 | 130（同 ㉝） | 拉扯感和系统一致 |
+
+### 避坑
+- ❌ **1:1 跟手无阻尼** → 一步拉到底像 Android 4.x；阻尼是高级感来源
+- ❌ **触发后 spinner 从 0 开始转** → 拉扯阶段的跟手旋转就是预告，松手时转速要延续
+- ❌ **完成态一闪而过** → 用户不确定刷没刷成功；打勾停留 500ms + success 触感
+- ❌ **在内部滚动容器也放刷新** → 用户在评论区下拉误触整页刷新；刷新只属于页面级
+- ❌ **loading 中还允许再拉** → 状态机必须有 idle/pulling/loading/done 四态互斥
+
+### 无障碍 fallback
+- 必须提供可见刷新按钮（读屏/键盘可触达）；PTR 是加速器
+- reduced-motion：跟手旋转关闭，触发后直接显示 loading 态
+
+---
+
+## ㊳ 惯性甩动 Momentum Fling（摩擦衰减滑轨）
+
+### 原理
+**拖拽释放时记录末速 vx（px/ms），rAF 循环里 `x += v * 16; v *= 0.94` 摩擦衰减** —— 甩出去的元素自己「滑行减速」，撞到边界反弹 0.4 倍速度。用于没有原生滚动的自绘选择器（滚轮、时间选择、值滑轨）。
+
+### 适用模块
+- 滚轮式选择器（时间 / 日期 / 城市三级联动）
+- 值选择滑轨（音量、字重、色温）
+- 自绘 canvas 时间轴
+
+### 不适用
+- ❌ 可用 ㉖ scroll-snap 解决的场景（原生惯性永远更顺）
+- ❌ 桌面端（鼠标拖拽的心智是「精准」不是「甩」）
+
+### 核心代码
+
+```javascript
+const rail = document.getElementById('rail');
+const knob = document.getElementById('knob');
+let x = 0, min = 0, max = 300;      // 值域（px）
+let drag = null, fling = null;
+
+function render() { knob.style.transform = `translateX(${x}px)`; }
+
+rail.addEventListener('pointerdown', (e) => {
+  drag = { x0: e.clientX, sx: x, lastX: e.clientX, lastT: performance.now(), v: 0 };
+  cancelAnimationFrame(fling); fling = null;      // 接住正在滑行的轨道
+  rail.setPointerCapture(e.pointerId);
+});
+rail.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  const now = performance.now();
+  drag.v = (e.clientX - drag.lastX) / Math.max(now - drag.lastT, 1);  // px/ms
+  drag.lastX = e.clientX; drag.lastT = now;
+  x = clamp(drag.sx + e.clientX - drag.x0, min, max);
+  render();
+});
+rail.addEventListener('pointerup', () => {
+  if (!drag) return;
+  const v = drag.v; drag = null;
+  if (Math.abs(v) < 0.15) return;                  // 慢速放手 = 不甩
+  let vel = v * 16;                                // 换算 px/frame
+  (function glide() {
+    x += vel;
+    if (x < min) { x = min; vel = -vel * 0.4; }    // 边界反弹 0.4 倍
+    else if (x > max) { x = max; vel = -vel * 0.4; }
+    else vel *= 0.94;                              // 摩擦衰减
+    render();
+    if (Math.abs(vel) > 0.2) fling = requestAnimationFrame(glide);
+  })();
+});
+rail.addEventListener('pointercancel', () => { drag = null; cancelAnimationFrame(fling); });
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| 摩擦系数 | 0.92~0.96 / frame | 0.94 ≈ 滑 12 帧收敛；越小越「涩」，越大越「溜冰」 |
+| 反弹恢复 | 0.35~0.5 倍速度 | 太大蹦跶，太小像撞墙 |
+| 起甩阈值 | \|v\| ≥ 0.15 px/ms | 慢速放手不甩，避免误飞 |
+| 吸附（可选） | 滑行中最近刻度 `x = round(x/44)*44` | 滚轮选择器必配；松手前 0.2s 开始吸 |
+
+### 避坑
+- ❌ **释放速度取整段平均值** → 被起始慢速稀释；只取最后 3~5 个 move 的末速
+- ❌ **无边界反弹** → 甩到底「啪」急停；0.4 倍反弹是「有东西接住你」的安全感
+- ❌ **滑行中新拖拽没取消 rAF** → 两套位移叠加飞出
+- ❌ **摩擦放在 16ms 假设外** → 用 rAF 每帧 `vel *= 0.94` 而非 setInterval；掉帧设备会滑得更久（可接受）
+- ❌ **滑轨忘了 touch-action: none** → 浏览器把拖动当滚动没收事件
+
+### 无障碍 fallback
+- 滑轨必须有 `<input type="range">` 或 ± 按钮等价物（键盘方向键可调）
+- reduced-motion：释放后直接缓动到最近刻度，无滑行
+
+---
+
+## ㊴ 堆叠卡片页 Stacked Cards（iOS 多任务风）
+
+### 原理
+**多层全屏卡片按 `scale(1 - n*0.05) translateY(n*4px)` 退后，前层拖动时后层按进度「提前跟进」** —— 拖 30%，第二层已滑到 60% 的位置（跟进系数 2x）：整个牌堆像一叠纸被捻开。松手速度判定：飞出 = 下一层成为新前层（spring 到位），回弹 = 全体归位。iOS 天气 / 多任务手势的 Web 复刻。
+
+### 适用模块
+- 沉浸式卡片浏览（天气、故事卡、多任务）
+- 表单向导的「回退堆栈」可视化
+- 匹配类应用（Tinder 是 ③ 飞出；㊴ 是「捻开一叠」）
+
+### 不适用
+- ❌ 卡片内容需要精读（后面的层缩到 0.9x 就难读）
+- ❌ 层数 > 4（第 5 层 scale 0.75 不可读，纯 GPU 浪费）
+
+### 核心代码
+
+```javascript
+const layers = Array.from(document.querySelectorAll('.stack-layer'));
+const FOLLOW = 2, SCALE_STEP = 0.05, SHIFT_STEP = -12;
+let stk = null;   // { startX, base: layers.map(→当前transform) }
+
+function layoutStack() {
+  layers.forEach((el, i) => {
+    el.style.zIndex = 100 - i;
+    if (i === 0) { el.style.transform = 'translateX(0)'; el.style.opacity = 1; }
+    else {
+      el.style.transform =
+        `translateX(${i * SHIFT_STEP}px) translateY(${i * 4}px) scale(${1 - i * SCALE_STEP})`;
+      el.style.opacity = i <= 3 ? 1 : 0;
+    }
+  });
+}
+layoutStack();
+
+layers[0].addEventListener('pointerdown', (e) => {
+  stk = { startX: e.clientX, w: innerWidth };
+  layers.forEach(el => el.style.transition = 'none');
+});
+window.addEventListener('pointermove', (e) => {
+  if (!stk) return;
+  const p = clamp((e.clientX - stk.startX) / stk.w, 0, 1);   // 只往右捻
+  layers.forEach((el, i) => {
+    const my = Math.max(0, 1 - i * FOLLOW);                   // i=1 提前 2 倍进度
+    el.style.transform =
+      `translateX(${p * my * 100 + (i > 0 ? 0 : 0) * i}%) translateY(${i * 4}px) scale(${1 - i * SCALE_STEP + p * my * SCALE_STEP})`;
+  });
+  // 精确版（上面的简式会漂移，正式实现用 base + delta）：
+});
+window.addEventListener('pointerup', (e) => {
+  if (!stk) return;
+  const dx = e.clientX - stk.startX;
+  const vx = dx / 16;   // 此处应记录末速，同 ㉗
+  const commit = dx > stk.w * 0.35 || vx > 30;
+  layers.forEach(el => el.style.transition = 'transform .4s cubic-bezier(0.32, 0.72, 0, 1)');
+  if (commit) {
+    layers[0].style.transform = 'translateX(110%)';
+    layers[0].style.opacity = '0';
+    // 全体往前补一层（第二层 spring 到前层位，后面的层跟进到新位置）
+    setTimeout(() => {
+      layers.push(layers.shift());
+      layoutStack();
+      layers[0].addEventListener('pointerdown', arguments.callee); // 注意：正式实现重新绑事件
+    }, 400);
+  } else {
+    layoutStack();   // 全体弹回
+  }
+  stk = null;
+});
+```
+
+> demo 参见 `mobile-ui-pro.html` 的「堆叠卡片」段 —— 正式实现以它为准，比上面的示意完整（base+delta 消除漂移）。
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| scale 递减 | 0.05/层 | 后层更小 = 深度；0.1/层 太陡 |
+| 跟进系数 | 2x | 前层拖 50% 后层已就位 —— 「整叠在动」的关键 |
+| 捻开方向 | 只往一个方向（右） | 双向捻的认知负担高 |
+| 飞出位移 | 110% 宽 | 留一点边缘残影比完全消失更有层次 |
+
+### 避坑
+- ❌ **每层独立拖拽事件** → 只有前层可拖；后层拖动会乱
+- ❌ **跟进系数 = 1** → 后层纹丝不动，看起来是「前层飞出」不是「捻开一叠」
+- ❌ **换层后没重排 z-index / 事件** → 第二层永远点不到
+- ❌ **超过 4 层** → 后面的层缩到不可读，纯浪费 GPU
+
+### 无障碍 fallback
+- 每层内容提供「查看详情」按钮（点按也能进入下一层）
+- reduced-motion：换层用 fade 即时切换
+
+---
+
+## ㊵ 液态填充 Liquid Swipe（SVG 贝塞尔按钮）
+
+### 原理
+**SVG `<path>` 两段贝塞尔画一个「水滴前沿」，path 宽度 = 进度 %，控制点随进度轻微前凸（液态表面张力）**。点击/进度推进时前沿以 elastic 曲线涌到 100%，完成后再涌回或切换状态。比普通 fill 高级在于「前沿永远鼓着」—— 像推水。
+
+### 适用模块
+- 高端 CTA / 订阅按钮的 hover/按压填充
+- 播放器进度条 / 音量条
+- 「液态」感的主题切换开关
+
+### 不适用
+- ❌ 频繁触发的普通按钮（动画 0.6s+ 会拖累操作节奏）
+- ❌ 精确进度需求（液态前沿不适合读精确值；用普通进度条）
+
+### 核心代码
+
+```html
+<button class="liquid" id="liquidBtn">
+  <svg class="liquid-svg" viewBox="0 0 200 48" preserveAspectRatio="none" aria-hidden="true">
+    <path class="liquid-fill" id="liquidFill" d="M0,48 L0,48 C0,16 0,16 0,0 L200,0 C200,16 200,32 200,48 Z"/>
+  </svg>
+  <span class="liquid-label">订阅</span>
+</button>
+```
+
+```javascript
+// 进度 p ∈ [0,1] → path：前沿在 x = p*200，凸起 bulge 随速度变化
+function liquidPath(p, bulge) {
+  const x = p * 200;
+  // 前沿是两段三次贝塞尔：从底部到顶部，控制点向前凸 bulge
+  return `M0,48 L${x - bulge},48
+          C${x + bulge * 0.6},40 ${x + bulge},24 ${x + bulge * 0.4},0
+          L200,0 L200,48 Z`;
+}
+const fill = document.getElementById('liquidFill');
+let lp = 0, lt = null;   // 当前进度 / 目标进度
+
+function setLiquid(target) { lt = target; tick(); }
+function tick() {
+  cancelAnimationFrame(fill._raf);
+  (function step() {
+    const d = lt - lp;
+    if (Math.abs(d) < 0.001) { lp = lt; }
+    else {
+      lp += d * 0.12;                          // 液体阻尼追赶
+      fill._raf = requestAnimationFrame(step);
+    }
+    const bulge = 14 + Math.abs(d) * 60;        // 移动越快，前沿越凸（表面张力）
+    fill.setAttribute('d', liquidPath(clamp(lp, -0.2, 1.2), bulge));
+  })();
+}
+liquidBtn.addEventListener('click', () => setLiquid(lt > 0.5 ? 0 : 1));
+setLiquid(0);
+```
+
+```css
+.liquid {
+  position: relative; overflow: hidden;
+  width: 200px; height: 48px; border: none; border-radius: 24px;
+  background: rgba(110,168,254,.15);
+  color: var(--accent); font-weight: 700; cursor: pointer;
+  touch-action: manipulation;
+}
+.liquid-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.liquid-fill { fill: var(--accent); }
+.liquid-label { position: relative; z-index: 1; transition: color .3s; }
+/* 液体过半时文字反白 —— 用 mix-blend-mode 一步到位 */
+.liquid-label { mix-blend-mode: difference; color: #fff; }
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| 追赶系数 | 0.1~0.14 / frame | 液体「黏稠感」；0.3 就成了普通动画 |
+| 基础凸起 | 12~16px | 静止时前沿也保持鼓形（水滴感） |
+| 速度凸起 | +|d|×60 | 越快越凸，停下了回落 —— 表面张力的物理感 |
+| 文字反白 | `mix-blend-mode: difference` | 免 JS 判断进度阈值 |
+| 点击场景 | 全程 0.6~0.9s | 涌过去 + 稳定，太快不像液体 |
+
+### 避坑
+- ❌ **前沿是直线（普通 width fill）** → 那是进度条不是液态；凸起是灵魂
+- ❌ **凸起恒定不随速度** → 死板；速度响应才有「活」感
+- ❌ **preserveAspectRatio="none" 忘了设** → 按钮尺寸一变 path 就变形
+- ❌ **用在每屏多个按钮上** → 同屏 > 2 个液态源 = 廉价感；点睛用
+- ❌ **path 每帧重建导致 GC 压力** → 字符串模板足够快，但别加 SVG filter（blur 会崩）
+
+### 无障碍 fallback
+```css
+@media (prefers-reduced-motion: reduce) {
+  .liquid-svg { display: none; }
+  .liquid.on { background: var(--accent); color: #0b1220; }   /* 纯色态切换 */
+}
+```
+- 状态（已订阅/未订阅）不能只靠液态表达 —— 文字必须同步变化（三冗余原则）
+
+---
+
+## ㊶ 双击点赞爱心爆裂 Double-Tap Like
+
+### 原理
+**250ms 内两次 pointerdown（单指）判定为双击 → 在第二次点击坐标 spawn 爱心 span：scale 0→1.3→1 弹出 + 350ms 停留 + 向上漂浮淡出**。连击计数：每次 burst 距上次 < 800ms 则 count+1 并重置消隐 timer；计数数字同步 bump（配合 ㊼）。爱心从**点击位置**长出来（不是中心）—— 这是「手感正确」的关键。
+
+### 适用模块
+- Feed 图片/视频（Instagram / 小红书式点赞）
+- 评论区长按点赞（长按 + 爱心更沉浸；按住即 burst）
+- 收藏、mark、applause 等情绪表达
+
+### 不适用
+- ❌ 桌面端双击（双击=选词的心智；桌面用 hover 心形按钮）
+- ❌ 内容本身可双击缩放的区域（㉞ pinch viewer 里别混用双击语义，先想清楚优先级）
+
+### 核心代码
+
+```javascript
+const media = document.getElementById('feedMedia');
+let lastTap = 0, likeCount = 1244, burstTimer = null;
+
+media.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  const now = performance.now();
+  if (now - lastTap < 250) { burst(e.clientX, e.clientY); lastTap = 0; }
+  else lastTap = now;
+});
+
+function burst(x, y) {
+  haptic('tap');
+  likeCount++;
+  likeEl.textContent = fmt(likeCount);
+  bumpBadge(likeEl);                                   // ㊼ 数字弹跳
+
+  const rect = media.getBoundingClientRect();
+  const heart = document.createElement('div');
+  heart.className = 'like-burst';
+  heart.textContent = '❤️';
+  heart.style.left = (x - rect.left) + 'px';
+  heart.style.top = (y - rect.top) + 'px';
+  media.appendChild(heart);
+  setTimeout(() => heart.remove(), 1000);
+  clearTimeout(burstTimer);                            // 连击窗口
+  burstTimer = setTimeout(() => setLiked(true), 800);
+}
+```
+
+```css
+.like-burst {
+  position: absolute; z-index: 5;
+  font-size: 64px; pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: likePop .95s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+@keyframes likePop {
+  0%   { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  22%  { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }   /* 过冲 1.3 */
+  38%  { transform: translate(-50%, -50%) scale(1); }
+  100% { transform: translate(-50%, -120px) scale(0.9) rotate(-8deg); opacity: 0; }
+}
+.media { position: relative; touch-action: manipulation; }  /* 消除双击缩放延迟 */
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| 双击窗口 | 250ms | 与浏览器/系统双击一致；超时窗口里的第二次 tap 别误判 |
+| 过冲 | scale 1.3 | 1.2~1.35 甜区；无过冲「没弹性」，1.5 像玩具 |
+| 漂浮 | 向上 120px + rotate ±8° | 随机 ±15° 更自然（JS 里随机一下 rotate） |
+| 连击窗口 | 800ms | 窗口内继续 +1；窗外重开一击 |
+
+### 避坑
+- ❌ **爱心从卡片中心冒出** → 违反「从点击位置长出来」的物理直觉
+- ❌ **双击没禁用浏览器缩放** → 加 `touch-action: manipulation`，否则双击触发系统放大
+- ❌ **连击计数用 click 事件** → click 有 300ms 延迟嫌疑，且无法拿到按下坐标；用 pointerdown
+- ❌ **爱心可点（没 pointer-events: none）** → 挡住下层内容
+- ❌ **每击都弹 toast** → burst 本身就是反馈；toast 是重复说明（违反减法表）
+
+### 无障碍 fallback
+- 必须有可见的心形按钮（`aria-pressed` 表达已赞）；双击是加速器
+- reduced-motion：爱心直接出现 200ms 消失，无过冲无漂浮
+
+---
+
+## ㊷ 横滑关闭通知/浮层 Swipe-to-Dismiss
+
+### 原理
+**整卡跟手 translateX + 微旋转（dx × 0.05°）+ 不透明度随位移衰减 → 阈值飞出（translateX ±130% + opacity 0）→ 卡片高度坍缩归零（height→0 动画）让下方内容流上来**。与 ㉛ 的分工：㉛ 是行**内容**滑动露出按钮（行还在）；㊷ 是**整卡离场**（通知消失）。高度坍缩是列表场景的灵魂细节 —— 卡飞走后洞要合上。
+
+### 适用模块
+- 应用内通知横幅（聊天/系统通知）
+- 临时浮层卡（新功能提示、公告）
+- 消息中心列表项快速清除
+
+### 不适用
+- ❌ 需要精确操作的卡（误滑代价高；用 ㉛ 显露确认按钮）
+- ❌ 桌面端通知（鼠标点 × 关闭；横滑是触摸心智）
+
+### 核心代码
+
+```javascript
+function makeDismissible(card) {
+  let d = null;
+  card.addEventListener('pointerdown', (e) => {
+    d = { x0: e.clientX, y0: e.clientY, lastX: e.clientX, lastT: performance.now(), v: 0, lock: null };
+    card.style.transition = 'none';
+  });
+  card.addEventListener('pointermove', (e) => {
+    if (!d) return;
+    const dx = e.clientX - d.x0, dy = e.clientY - d.y0;
+    if (!d.lock) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      d.lock = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+      if (d.lock === 'v') { resetCard(); return; }     // 竖向交给页面滚动
+    }
+    const now = performance.now();
+    d.v = (e.clientX - d.lastX) / Math.max(now - d.lastT, 1);
+    d.lastX = e.clientX; d.lastT = now;
+    card.style.transform =
+      'translateX(' + dx + 'px) rotate(' + dx * 0.05 + 'deg)';   // 微旋转 = 「拎起来」
+    card.style.opacity = String(1 - Math.min(Math.abs(dx) / 260, 0.55));
+  });
+  card.addEventListener('pointerup', () => {
+    if (!d) return;
+    const dx = getTX(card), v = d.v; d = null;
+    if (Math.abs(dx) > card.offsetWidth * 0.4 || Math.abs(v) > 0.5) flyOut(card, dx);
+    else resetCard();
+  });
+  card.addEventListener('pointercancel', () => { d = null; resetCard(); });
+}
+function resetCard() {
+  card.style.transition = 'transform .3s cubic-bezier(0.32,0.72,0,1), opacity .3s';
+  card.style.transform = ''; card.style.opacity = '';
+}
+function flyOut(card, dx) {
+  haptic('success');
+  card.style.transition = 'transform .32s cubic-bezier(0.32,0.72,0,1), opacity .32s';
+  card.style.transform = 'translateX(' + (dx > 0 ? 1 : -1) * 130 + '%) rotate(' + dx * 0.05 + 'deg)';
+  card.style.opacity = '0';
+  card.addEventListener('transitionend', () => {
+    // 高度坍缩：height + margin + padding 归零（这里是唯一允许动 height 的地方——离场时刻）
+    card.style.height = card.offsetHeight + 'px';
+    requestAnimationFrame(() => {
+      card.style.transition = 'height .28s var(--ios-ease), margin .28s var(--ios-ease)';
+      card.style.height = '0'; card.style.margin = '0'; card.style.padding = '0';
+      setTimeout(() => card.remove(), 300);
+    });
+  }, { once: true });
+}
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| 微旋转 | dx × 0.05° | 超过 0.1° 卡片像要翻倒；旋转让「拎起」感真实 |
+| 不透明度下限 | ≥ 0.45 | 完全消失会让用户怀疑「是不是删错了」 |
+| 提交阈值 | 40% 宽 or vx > 0.5px/ms | 与 ㉗㉛ 统一 |
+| 高度坍缩 | 0.28s iOS 曲线 | 比飞出略快 —— 洞合上后视线才移走 |
+
+### 避坑
+- ❌ **飞出后洞留在那** → 列表出现空洞；高度坍缩必须做
+- ❌ **没有微旋转** → 平移像「滑块」不像「甩卡片」
+- ❌ **不透明度降到 0** → 用户对「删了什么」失去感知；留 0.45
+- ❌ **误滑无补救** → 删除类通知配 toast 撤销（同 ㉛ 原则）
+- ❌ **卡内有按钮还触发横滑** → 按钮区 `e.stopPropagation()`，或滑动从非按钮区起手才允许
+
+### 无障碍 fallback
+- 每卡保留 × 关闭按钮（键盘/读屏可达）
+- reduced-motion：飞出/坍缩改即时 remove
+
+---
+
+## ㊸ 3D 滚轮选择器 Wheel Picker
+
+### 原理
+**item 距滚动中心的偏移 n → `rotateX(n × 22°) translateZ(28px)` + opacity 衰减 = 圆柱面错觉**；容器 `perspective: 900px`。滚动本体用**原生 overflow-y + scroll-snap**（㉖ 原则），scroll 事件里重算每个 item 的 3D transform，scrollend 落定选中值。原生惯性 + 3D 曲面 = iOS 时间选择器。
+
+### 适用模块
+- 时间 / 日期 / 时长选择
+- 城市三级联动
+- 字号、倍速、单位选择
+
+### 不适用
+- ❌ 选项 > 30 个（3D 轮不适合海量；改搜索列表）
+- ❌ 需要多选（轮式是单选心智）
+
+### 核心代码
+
+```html
+<div class="wheel" id="wheel">
+  <div class="wheel-item" style="height:44px">00</div>  <!-- 头尾各补 2 个空白 item 做缓冲 -->
+  <div class="wheel-item">…</div>
+</div>
+```
+
+```css
+.wheel {
+  height: 220px;                        /* 5 × item 44px */
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  overscroll-behavior: contain;
+  perspective: 900px;                    /* 3D 曲面的根 */
+  scrollbar-width: none;
+  touch-action: pan-y;
+  -webkit-mask-image: linear-gradient(transparent, #000 22%, #000 78%, transparent);  /* 上下羽化 */
+}
+.wheel::-webkit-scrollbar { display: none; }
+.wheel-item {
+  height: 44px; scroll-snap-align: center;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; color: var(--ink-dim);
+  will-change: transform;
+}
+.wheel-item.sel { color: var(--ink); font-weight: 700; }
+```
+
+```javascript
+const ITEM_H = 44;
+let wTick = false;
+wheel.addEventListener('scroll', () => {
+  if (wTick) return;
+  wTick = true;
+  requestAnimationFrame(() => {
+    const cy = wheel.scrollTop + wheel.clientHeight / 2;      // 滚动中心线
+    wheel.querySelectorAll('.wheel-item').forEach(it => {
+      const n = ((it.offsetTop + ITEM_H / 2) - cy) / ITEM_H;   // 距中心的 item 数（带小数）
+      const ang = clamp(n, -3, 3) * -22;                       // 圆柱面：越远越「躺倒」
+      it.style.transform = 'rotateX(' + ang + 'deg) translateZ(' + (Math.abs(n) < 1 ? 28 : 10) + 'px)';
+      it.style.opacity = String(clamp(1 - Math.abs(n) / 3, 0.25, 1));
+    });
+    wTick = false;
+  });
+}, { passive: true });
+
+wheel.addEventListener('scrollend', () => {
+  const idx = Math.round(wheel.scrollTop / ITEM_H);
+  items.forEach((it, i) => it.classList.toggle('sel', i === idx));
+  haptic('snap');                                     // 落定一震 = 「咔哒入槽」
+  output.textContent = items[idx].textContent;
+});
+wheel.scrollTop = 2 * ITEM_H;                          // 初始停在缓冲后的第 0 项
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| 可见行数 | 5（奇数） | 中间行 + 上下各 2；3 行曲面感不足，7 行浪费高度 |
+| 每档角度 | 20~26° | iOS ≈ 22°；太大像转筒，太小没曲面 |
+| translateZ | 中心 28px / 外围 10px | 选中项「凸出来」—— 深度反馈 |
+| 羽化 mask | 22%/78% | 上下渐隐让边缘 item 「绕到背面」的感觉 |
+| 角度钳制 | \|n\| ≤ 3 | 超出视口的 item 不用算，省性能 |
+
+### 避坑
+- ❌ **JS 手写滚轮惯性** → 原生滚动 + snap 的惯性最顺；自绘是低级错误（㊳ 只用于非滚动场景）
+- ❌ **perspective 加在 item 上** → 每个 item 各自为中心，没有公共圆柱面；perspective 必须在容器
+- ❌ **每个 item 都 will-change 常驻** → 内存压力；只给视口附近 item 开
+- ❌ **scroll 回调里同步读 offsetTop 又写 transform** → 布局抖动；rAF 节流 + 读写分离
+- ❌ **头尾不补空白缓冲** → 第一项/最后一项永远到不了中心线
+
+### 无障碍 fallback
+- wheel 只是皮肤：底层必须存在 `<select>` 或 stepper 按钮（键盘可操作），`aria-hidden` 装饰轮
+- reduced-motion：3D 变换关闭，保留平面 snap 列表
+
+---
+
+## ㊹ 主题圆形揭示 Circular Reveal（View Transitions 扩展）
+
+### 原理
+**点击切换按钮时记录按钮坐标 → `document.startViewTransition()` 包住主题 class 翻转 → CSS 把 `::view-transition-new(root)` 的 clip-path 从 `circle(0 at x y)` 扩到 `circle(150% at x y)`** —— 新主题像墨水从按钮扩散开（iOS 17 时钟风）。不支持 VT 的浏览器降级普通 fade。
+
+### 适用模块
+- 深浅色模式切换（最经典）
+- 主题皮肤切换 / 强调色切换
+- 「编辑模式」全屏进入
+
+### 不适用
+- ❌ 高频切换（每次 VT 截屏全页合成，0.5s+ 内别连点）
+- ❌ 低端机默认开启（VT 合成开销大；按设备降级 fade）
+
+### 核心代码
+
+```javascript
+const themeBtn = document.getElementById('themeBtn');
+themeBtn.addEventListener('click', () => {
+  const { left, top, width, height } = themeBtn.getBoundingClientRect();
+  const x = left + width / 2, y = top + height / 2;
+  const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+
+  const flip = () => document.documentElement.classList.toggle('light');
+
+  if (!document.startViewTransition || reduced) { flip(); return; }   // 降级
+
+  const vt = document.startViewTransition(flip);
+  vt.ready.then(() => {
+    document.documentElement.animate(
+      { clipPath: ['circle(0px at ' + x + 'px ' + y + 'px)',
+                   'circle(' + r + 'px at ' + x + 'px ' + y + 'px)'] },
+      { duration: 480, easing: 'cubic-bezier(0.32, 0.72, 0, 1)',
+        pseudoElement: '::view-transition-new(root)' }   // 只对新快照做揭示
+    );
+  });
+});
+```
+
+```css
+/* 关闭 VT 默认的交叉淡入，为圆形揭示让路 */
+::view-transition-old(root),
+::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-old(root) { z-index: 1; }        /* 旧主题垫底当画布 */
+::view-transition-new(root) { z-index: 2; }        /* 新主题从按钮位置扩散 */
+
+/* 按钮本体也做一个小细节：图标 sun/moon 旋转交替 */
+.theme-ico { transition: transform .4s cubic-bezier(0.34,1.56,0.64,1); }
+html.light .theme-ico { transform: rotate(180deg) scale(1.15); }
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| 半径 | `hypot(最远角)` | 一次到位盖满全屏，不用二次扩展 |
+| duration | 450~550ms | 太快看不出扩散方向，太慢拖沓 |
+| 曲线 | iOS 曲线 `cubic-bezier(0.32,0.72,0,1)` | 扩散是导航级动作，不要 spring |
+| 揭示起点 | 点击的按钮中心 | 用户按哪从哪扩散 —— 因果感 |
+
+### 避坑
+- ❌ **clip-path 起点用屏幕中心** → 失去「从我这按下的地方长出来」的因果感
+- ❌ **不给 VT 的伪元素清 animation** → 默认交叉淡入和 clip-path 打架，呈现两次过渡
+- ❌ **每次切换都 150% 半径 clip-path 常驻** → 揭示动画结束 VT 自动清理；别自己把 clip-path 写进全局样式
+- ❌ **没做能力检测** → Firefox 旧版无 VT；`document.startViewTransition` 判断是唯一开关
+
+### 无障碍 fallback
+- 降级链已内置：无 VT / reduced-motion → 直接翻转 class，即时切换
+- 按钮必须有 `aria-pressed` 或 `aria-label="切换深色模式"` 语义
+
+---
+
+## ㊺ 按住说话 Hold-to-Talk（波形 + 上滑取消）
+
+### 原理
+**按住按钮 → 波形条组随机高度抖动 + 计时 → 手指上滑超 80px 出现「松开取消」态（按钮变红 + 波形冻结）→ 松手判定：y 位移 < 80px 发送（气泡插入 + ㊽ 庆祝可选），≥ 80px 取消（气泡飞散）**。`pointercancel` 一律按取消处理 —— 来电中断绝不发半句话。
+
+### 适用模块
+- IM 语音消息（微信式）
+- 语音评论 / 语音搜索
+- 对讲功能
+
+### 不适用
+- ❌ 网页正文区（无语音心智；用输入框）
+- ❌ 页面有全局语音助手冲突时
+
+### 核心代码
+
+```javascript
+const talkBtn = document.getElementById('talkBtn');      // 大圆形 mic 按钮
+const bars = Array.from(document.querySelectorAll('.talk-bar'));   // 波形条 5~9 根
+let ht = null, timer = null, barTimer = null;
+
+talkBtn.addEventListener('pointerdown', (e) => {
+  ht = { y0: e.clientY, cancel: false, t0: performance.now() };
+  talkBtn.setPointerCapture(e.pointerId);
+  talkBtn.classList.add('holding');                       // scale 1.06 + 背景亮起
+  haptic('tap');
+  barTimer = setInterval(() => bars.forEach(b => {       // 波形随机抖动
+    b.style.height = (8 + Math.random() * 26) + 'px';
+  }), 110);
+  timer = setInterval(() => {                             // 计时
+    timeEl.textContent = fmtT(performance.now() - ht.t0);
+  }, 100);
+});
+
+talkBtn.addEventListener('pointermove', (e) => {
+  if (!ht) return;
+  const up = ht.y0 - e.clientY;
+  ht.cancel = up > 80;                                    // 上滑 80px → 取消态
+  talkBtn.classList.toggle('canceling', ht.cancel);
+  stateEl.textContent = ht.cancel ? '松开取消' : '松开发送 · 上滑取消';
+});
+
+talkBtn.addEventListener('pointerup', () => {
+  if (!ht) return;
+  const cancel = ht.cancel; ht = null;
+  stopTalk();
+  if (cancel) { haptic('warn'); showBubbleCanceled(); }   // 气泡虚化消散
+  else { haptic('success'); showVoiceBubble(); }          // 插入语音气泡（时长带进 UI）
+});
+talkBtn.addEventListener('pointercancel', () => {        // 系统中断 = 静默取消
+  ht = null; stopTalk();
+});
+
+function stopTalk() {
+  clearInterval(timer); clearInterval(barTimer);
+  talkBtn.classList.remove('holding', 'canceling');
+  bars.forEach(b => b.style.height = '8px');
+}
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| 取消阈值 | 上滑 80px | 与拇指划出按钮区域的自然距离匹配 |
+| 波形频率 | 100~130ms 换一次高度 | 太快乱，太慢呆 |
+| 波形条 | 5~9 根 | 奇数对称好看 |
+| 最短时长 | 500ms | 低于则提示「太短」不发送（防误触） |
+| 计时显示 | 每 100ms 刷新 | 数字要 `tabular-nums` |
+
+### 避坑
+- ❌ **pointercancel 当发送处理** → 来电/手势中断把半句话发出去，事故级 bug
+- ❌ **波形用 JS 每帧随机** → 神经质；100ms 节拍 + CSS transition 才有「呼吸感」
+- ❌ **取消无触感区分** → 发送 success 双脉冲 / 取消 warn 三连震，波形也要区分（冻结 vs 抖动）
+- ❌ **上滑取消后松手仍发送** → ht.cancel 判定要在 move 里持续更新，别只在起始记一次
+- ❌ **按钮长按没防滚动** → `touch-action: none`（语音按钮内不存在滚动需求）
+
+### 无障碍 fallback
+- 必须提供普通「点按录音 / 再点停止」模式（无长按心智的用户与读屏用户）
+- reduced-motion：波形静态 + 计时照常
+
+---
+
+## ㊻ 骨架屏 Shimmer（同尺寸防抖动）
+
+### 原理
+**灰底条 + 高光斜带从左到右扫过（`linear-gradient` + `background-position` 动画）**。核心纪律：**骨架布局与真实内容逐像素同尺寸**（同宽高、同圆角、同间距），数据到达后骨架淡出、内容从 `translateY(8px)`+opacity 0 淡入 —— 两者重叠的瞬间没有布局跳动。
+
+### 适用模块
+- Feed 卡片 / 详情页首屏占位
+- 图片位占位（图片 onload 再替换）
+- 下拉刷新后的刷新区
+
+### 不适用
+- ❌ 秒级以内的接口（骨架闪一下反而干扰；直接转圈或无 loading）
+- ❌ 内容尺寸不可预知的瀑布流（骨架猜不准 = 抖动更大；用模糊低质图占位）
+
+### 核心代码
+
+```css
+.sk { position: relative; overflow: hidden; background: #232838; border-radius: 8px; }
+.sk::after {
+  content: '';
+  position: absolute; inset: 0;
+  transform: translateX(-100%);           /* 用 transform 扫光，别动 background-position（要重绘） */
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.07) 40%, rgba(255,255,255,.12) 50%, rgba(255,255,255,.07) 60%, transparent);
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer { to { transform: translateX(100%); } }
+
+/* 与真实内容同尺寸对齐：骨架直接复用内容类的尺寸 */
+.skeleton-card { /* 与 .real-card 相同的 padding/gap/图片高 */ }
+
+/* 完成过渡：骨架 → 内容，两帧重叠替换 */
+.loaded .sk { opacity: 0; transform: scale(0.98); transition: opacity .25s; pointer-events: none; }
+.loaded .real { opacity: 1; transform: translateY(0); }
+.real { position: absolute; inset: 0; opacity: 0; transform: translateY(8px); transition: opacity .3s, transform .3s var(--ios-ease); }
+```
+
+```html
+<div class="card-wrap" id="card">            <!-- 固定尺寸的锚容器 -->
+  <div class="sk skeleton-card" id="sk">…骨架条…</div>
+  <div class="real" id="real">…真实内容…</div>
+</div>
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| 扫光周期 | 1.2~1.6s | 快于 1s 像报警灯，慢于 2s 像卡死 |
+| 高光带 | ~50% 宽，峰值 alpha 0.1~0.14 | 骨架要安静；高光是「呼吸」不是「霓虹」 |
+| 完成过渡 | 骨架 0.25s 淡出 + 内容 0.3s 淡入上移 | 谁先谁后无所谓，**尺寸必须零抖动** |
+| 最长骨架时长 | 3s | 超时换错误态 + 重试按钮；骨架不能无限闪 |
+
+### 避坑
+- ❌ **骨架尺寸猜的（图片高度随便给）** → 内容到达瞬间布局跳动 —— 骨架屏存在的全部意义就是消抖
+- ❌ **扫光动 background-position** → 每帧重绘；transform 扫光是合成层
+- ❌ **骨架闪现 <300ms** → 数据太快时骨架成了噪点；300ms 内到达直接上内容
+- ❌ **骨架与内容排版不一致（行数/圆角不同）** → 用户看到两次「跳版」
+- ❌ **多卡片各自节奏** → 同屏骨架共享一个 shimmer 相位（`animation-delay` 递增 0~200ms 即可，别完全随机）
+
+### 无障碍 fallback
+- `aria-busy="true"` 标在骨架容器上，读屏可感知加载中
+- reduced-motion：扫光停止，骨架静态灰块
+
+---
+
+## ㊼ 角标弹跳 Badge Bump（数字变化动画族）
+
+### 原理
+**数字变化瞬间：scale 1→1.35→1（`cubic-bezier(0.34,1.56,0.64,1)` 回弹）+ 颜色脉冲；增量用「+N」小字从原值上飞出淡出**。retrigger 技巧：`el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump')` 强制重启动画。99+ 截断、去重合并（连击时只 bump 不叠加数字）。
+
+### 适用模块
+- 点赞 / 消息 / 购物车数量变化（高频）
+- Tab 未读数、导航角标
+- 直播观看人数上涨
+
+### 不适用
+- ❌ 实时流数字（每秒都在变的高频行情 —— 弹跳变成抽搐，直接数字滚动）
+- ❌ 关键金额/时间（动画延迟感知，金融数字直接换）
+
+### 核心代码
+
+```css
+.badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px; padding: 0 6px;
+  border-radius: 99px;
+  background: var(--danger); color: #fff;
+  font-size: 12px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.badge.bump { animation: badgeBump .45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes badgeBump {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.35); background: #ff7d8e; }   /* 颜色同步脉冲 */
+  100% { transform: scale(1); }
+}
+.badge .fly {                                   /* +N 飞出 */
+  position: absolute; left: 50%;
+  font-size: 12px; font-weight: 800; color: var(--danger);
+  animation: flyUp .7s ease-out forwards; pointer-events: none;
+}
+@keyframes flyUp {
+  from { transform: translate(-50%, 0); opacity: 1; }
+  to   { transform: translate(-50%, -22px); opacity: 0; }
+}
+```
+
+```javascript
+function bumpBadge(el, delta) {
+  el.classList.remove('bump');
+  void el.offsetWidth;                       // 强制 reflow 重启动画 —— retrigger 唯一正解
+  el.classList.add('bump');
+  if (delta > 0) {
+    const fly = document.createElement('span');
+    fly.className = 'fly';
+    fly.textContent = '+' + delta;
+    el.appendChild(fly);
+    setTimeout(() => fly.remove(), 700);
+  }
+  haptic('tap');
+}
+function setBadgeCount(el, n) {
+  el.textContent = n > 99 ? '99+' : String(n);   // 截断
+  bumpBadge(el, ...);
+}
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| 弹跳幅度 | 1.3~1.4 | 低于 1.2 感知不到，高于 1.5 干扰相邻元素 |
+| duration | 0.4~0.5s | 回弹动画的过冲需要时间展开 |
+| 颜色脉冲 | 同色系 +10% 亮度 | 颜色+形状双通道（三冗余原则的轻量版） |
+| +N 飞出 | 向上 22px / 0.7s | 只在 delta ≥ 2 时展示；+1 每次飞太闹 |
+| 触感 | tap 单脉冲 | 与视觉 bump 同帧发出 |
+
+### 避坑
+- ❌ **连击时数字一格一格加** → 合并：动画 450ms 内的增量等动画结束一次性 bump
+- ❌ **动画没重启（class 已在）** → `void offsetWidth` retrigger；或者用 `el.getAnimations().forEach(a => a.cancel())`
+- ❌ **角标宽度不定导致布局抖** → `min-width` + `tabular-nums`
+- ❌ **每个 tab 都 bump** → 只 bump 用户当前不看的位置（别打扰当前焦点区）
+- ❌ **reduced-motion 下还飞 +N** → 静态数字直接换
+
+### 无障碍 fallback
+- `aria-live="polite"` 放在数字容器上，读屏播报变化（「3 条新消息」）
+- reduced-motion：无 scale 无飞字，只有颜色一闪（颜色也不能是唯一通道，需配合 aria-live 文本）
+
+---
+
+## ㊽ 庆祝粒子 Confetti / Emoji Rain（成功情绪反馈）
+
+### 原理
+**emoji 先预渲染成离屏 canvas 位图（每个精灵只画一次），每帧只做 `drawImage` 贴图**。粒子从触发点向上抛（vx ±3、vy -8~-13），每帧 `vy += 0.35` 重力、旋转；落出屏底销毁，全部消亡即停 rAF。同屏同时只允许一场（新庆祝替换旧的）。
+
+> **为什么必须预渲染**：彩色 emoji 是 canvas 上最贵的绘制操作之一。130 个粒子 × 每帧 `ctx.font` + `fillText`（emoji）× 60fps ≈ 每秒 7800 次字形光栅化 —— 实测必掉帧。预渲染后每帧只剩 130 次位图 blit，手机上满帧跑。
+
+### 适用模块
+- 支付成功 / 下单完成 / 发布成功
+- 达成目标（打卡满 7 天、通关）
+- 运营活动抢到券
+
+### 不适用
+- ❌ 常规成功（保存设置之类 —— 一次 toast 足够，撒花就是噪音）
+- ❌ 深色阅读沉浸页（打破氛围）
+- ❌ 同一动作可无限重复触发的入口（每次点都撒花=通货膨胀）
+
+### 核心代码
+
+```javascript
+const fx = document.getElementById('fx');      // 全屏 fixed canvas，pointer-events: none
+const ctx = fx.getContext('2d');
+const FX_DPR = Math.min(devicePixelRatio || 1, 2);   // DPR 钳制：手机 DPR 3 全屏画布 = 3x 像素
+let parts = [], fxRaf = null;
+
+function resizeFx() {
+  fx.width = innerWidth * FX_DPR;
+  fx.height = innerHeight * FX_DPR;
+  fx.style.width = innerWidth + 'px';
+  fx.style.height = innerHeight + 'px';
+  ctx.setTransform(FX_DPR, 0, 0, FX_DPR, 0, 0);
+}
+
+// 关键：emoji × 3 档尺寸 → 离屏 canvas 精灵（只画一次）
+let sprites;
+function buildSprites(chars) {                  // chars: ['🎉','✨','🎊']
+  sprites = [];
+  chars.forEach(ch => [16, 24, 30].forEach(size => {
+    const c = document.createElement('canvas');
+    const s = Math.ceil(size * FX_DPR);
+    c.width = s; c.height = s;
+    const cc = c.getContext('2d');
+    cc.font = s + 'px serif';
+    cc.textBaseline = 'middle'; cc.textAlign = 'center';
+    cc.fillText(ch, s / 2, s / 2);
+    sprites.push({ img: c, size });
+  }));
+}
+buildSprites(['🎉', '✨', '🎊']);
+
+function confetti(x, y) {
+  cancelAnimationFrame(fxRaf);
+  resizeFx();
+  const count = innerWidth < 480 ? 80 : 130;    // 小屏减粒子
+  parts = Array.from({ length: count }, () => {
+    const sp = sprites[Math.random() * sprites.length | 0];
+    return {
+      x, y,
+      vx: (Math.random() - 0.5) * 7,
+      vy: -(8 + Math.random() * 6),
+      rot: Math.random() * Math.PI * 2,
+      vr: (Math.random() - 0.5) * 0.3,
+      img: sp.img, size: sp.size
+    };
+  });
+  haptic('success');
+  (function loop() {
+    ctx.setTransform(FX_DPR, 0, 0, FX_DPR, 0, 0);
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    parts.forEach(p => {
+      p.vy += 0.35; p.x += p.vx; p.y += p.vy;
+      p.rot += p.vr; p.vx *= 0.99;
+      ctx.setTransform(FX_DPR, 0, 0, FX_DPR, p.x, p.y);   // setTransform 替代 save/restore
+      ctx.rotate(p.rot);
+      ctx.drawImage(p.img, -p.size / 2, -p.size / 2, p.size, p.size);
+    });
+    parts = parts.filter(p => p.y < innerHeight + 40);
+    if (parts.length) fxRaf = requestAnimationFrame(loop);
+    else { ctx.setTransform(FX_DPR, 0, 0, FX_DPR, 0, 0); ctx.clearRect(0, 0, innerWidth, innerHeight); }
+  })();
+}
+
+function celebrateAt(el) {
+  const r = el.getBoundingClientRect();
+  confetti(r.left + r.width / 2, r.top);
+}
+```
+
+```css
+#fx { position: fixed; inset: 0; pointer-events: none; z-index: 999; }
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| 粒子数 | 130（小屏 80） | < 60 稀疏寒酸；> 200 即使预渲染低端机也吃紧 |
+| 重力 | 0.35 / frame² | 0.2 飘太久，0.5 直坠 |
+| 初速 | vy -8~-13 | 抛物线顶点略高于触发点即可 |
+| 精灵尺寸 | 16 / 24 / 30 三档 | 大小随机是层次感来源；位图按 FX_DPR 放大烘焙 |
+| emoji 集 | 3~5 种 | 单一 emoji 显得模板化，太多像贴纸墙 |
+| DPR | 钳制 ≤ 2 | DPR 3 的手机全屏画布 ≈ 300 万像素/帧合成 |
+| 出场率 | 一个用户流只 1 处 | 稀缺才有情绪价值 |
+
+### 避坑
+- ❌ **每帧每粒子 `ctx.font` + emoji `fillText`** → 每秒近 8000 次彩色字形光栅化，必掉帧；**预渲染离屏位图是唯一正解**（实测从掉帧到满帧的差距就在这一步）
+- ❌ **canvas 不钳制 DPR** → DPR 3 的手机上全屏画布是普通屏的 9 倍像素；`Math.min(dpr, 2)` 肉眼无损
+- ❌ **每粒子 save/restore** → 130 次/帧变换栈操作；`setTransform` 一步到位
+- ❌ **canvas 挡住点击** → `pointer-events: none` 忘了加 = 全页面点不了
+- ❌ **粒子用 DOM 元素** → 130 个 span 动画秒掉帧；canvas 是唯一解
+- ❌ **rAF 不清理** → 全部落幕后循环还在跑，发热耗电
+- ❌ **从屏幕中心喷** → 从触发按钮/触发点喷，因果感（同 ㊹ 圆形揭示）
+- ❌ **每次 burst 重建精灵** → 精灵只需建一次；burst 只随机引用
+
+### 无障碍 fallback
+- 庆祝是纯情绪装饰：核心信息（「支付成功」）必须已有文字/toast，粒子只锦上添花
+- reduced-motion：直接不喷；触感 success 保留
+
+---
+
+## 附：移动端手感三定律（㉖-㉜ 总纲）
+
+1. **跟手优先**：任何拖拽，松手前 `transition: none` 1:1 跟随；松手后才上曲线
+2. **速度 + 位移双判定**：快速轻扫要能触发（速度 > 0.5px/ms），慢拖按就近吸附/过半阈值
+3. **原生滚动是白送的**：能 `scroll-snap` 就别 JS 手写 transform pager —— 惯性、边缘回弹、滚动条可见性全免费
+
+高级补充律（㉝-㊵）：
+
+4. **阻尼统一公式**：所有「拉扯 / stretch」手感都用对数阻尼 `c * (1 - 1/(dx/c + 1))`，c ≈ 150 —— 橡皮筋（㉝）、下拉刷新（㊲）、Pinch 边界共用一套物理
+5. **让位只动 transform，松手才结算 DOM**：拖拽排序（㊱）、堆叠卡片（㊴）拖动过程中的让位/换层全用 transform 预览，pointerup 一次性真实重排
+6. **末速取最后 3~5 个 move**：fling / swipe 判定速度不要用整段平均 —— 起手慢会稀释释放速度，只取 release 前的末速
+7. **增强非唯一路径**：pinch / 拖拽排序 / 下拉刷新都必须有按钮或键盘等价物；手势是加速器，不是入口
+8. **反馈从触发点长出来**：点赞爱心、庆祝粒子、主题揭示全部从用户按下的坐标发出 —— 因果感是高级反馈和廉价特效的分界线（㊶ ㊹ ㊽ 共用）
+9. **成功要克制**：常规成功给 toast 就够；庆祝粒子（㊽）只用在「用户流里唯一的情绪高点」，每屏每流 ≤ 1 处 —— 稀缺才有情绪价值
+
+---
+
 ## 附：错误速查（搬不上台面的踩坑）
 
 | 症状 | 原因 | 修法 |
@@ -2431,3 +4670,29 @@ applyStack();
 | 移动端书签被裁切 | card+bookmark 总宽 > 视口 | 540px / 400px 断点收窄 card / bookmark |
 | active 卡被后面的卡盖住 | z-index 设错 | .card.active 用 `z-index: 100`，其他递减 |
 | 书签 hover 时整体晃动 | 书签作为 .card 子元素但加了 transform | hover 时只动 `.bookmark` 自身，不要动 .card |
+| 拖拽跟手"慢半拍" | 跟手阶段没关 transition | pointerdown 时 `transition: none`，松手再恢复 |
+| 快速轻扫没反应 | 判定只看位移不看速度 | 加速度判定：`vx > 0.5 px/ms` 直接提交 |
+| 页面拖到一半卡死 | 没监听 `pointercancel` | 加 pointercancel 复位（来电/系统手势会中断） |
+| 内部横轨滚完页面跟着滚 | 缺 `overscroll-behavior: contain` | 加在内滚容器上 |
+| 竖滑列表误触发滑动返回/滑操作 | 没做方向锁 | 首次 pointermove 判定 h/v，锁定后不再改判 |
+| snap 轨道吸不上/位置漂移 | mandatory + 间距不统一 | 统一 gap + `scroll-padding`，或降 proximity |
+| iOS 上 vibrate 无效 | Safari 不支持 Vibration API | 静默降级到 scale+色变；原生壳里用 HapticEngine |
+| 橡皮筋一下拉到底 | 没用阻尼公式，1:1 跟手 | 换 `c*(1-1/(dx/c+1))` 对数阻尼 |
+| Pinch 时图片乱漂 | transform-origin 固定 center | origin 锁双指起点中点 |
+| Pinch 中一指抬起就退出 | 只判 pointerup 次数 | `pointers.size < 2` 才结束 pinch |
+| 拖拽排序换位时整表闪烁 | 换位用 insertBefore 实时改 DOM | 让位用 transform，松手才 appendChild 结算 |
+| fling 甩太远/太近 | 速度用整段平均 | 只取最后 3~5 个 move 的末速 |
+| 堆叠卡片「不像一叠」 | 后层不跟进 | 前层进度 ×2 的跟进系数，后层提前就位 |
+| 液态按钮前沿是直线 | 只改 width/clip-path | SVG path 贝塞尔前沿，凸起随速度变化 |
+| stretch 头图底部露缝 | transform-origin 在 center | origin 改 50% 100%（底边锚定） |
+| 双击点赞触发浏览器缩放 | 没 `touch-action: manipulation` | 加上；双击判定用 pointerdown 不是 click |
+| 双击爱心从中心冒出 | burst 坐标写死 | 用 pointerdown 的 clientX/Y 定位 |
+| 横滑通知后列表留洞 | 卡飞走后没做高度坍缩 | transitionend 里 height→0 再 remove |
+| 3D 轮没有圆柱面 | perspective 加在 item 上 | perspective 必须在滚动容器上 |
+| 圆形揭示出现两次过渡 | VT 默认交叉淡入没清 | `::view-transition-*` animation: none |
+| 按住说话来电中断仍发送 | pointercancel 当成功处理 | pointercancel 一律静默取消 |
+| 骨架屏内容到达时跳动 | 骨架尺寸是猜的 | 骨架与真实内容逐像素同尺寸 |
+| 角标动画第二次不播 | class 已在没法重启 | `void el.offsetWidth` retrigger |
+| confetti 页面点不了 | canvas 忘了 pointer-events:none | 加上，且粒子全灭后清 rAF |
+| confetti 掉帧 | 每帧每粒子 ctx.font + emoji fillText | emoji 预渲染离屏位图，每帧只 drawImage |
+| confetti 高分屏更卡 | canvas 没钳制 DPR | `Math.min(dpr, 2)`，DPR3 全屏画布像素 ×9 |

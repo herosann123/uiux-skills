@@ -1,10 +1,10 @@
 ---
 name: ui-interaction-skill
-description: 选择并实现高级 UI 交互模式（视差 / 滚动触发 / 卡片堆叠 / 磁吸 / 文字揭示 / SVG 路径 / 弹性 / 数字翻牌 / 3D 倾斜 / 玻璃拟态 / 极光渐变 / 粒子网络 / 水波纹 / 粘性滚动 / FLIP 共享元素 / View Transitions / AI 流式打字机）。基于 UI 模块类型（Hero、卡片、按钮、计数器、加载、弹窗、Onboarding、AI 对话气泡等）从映射表 lookup 推荐模式，给出可直接复用的代码模板与避坑指南。
+description: 选择并实现高级 UI 交互模式（视差 / 滚动触发 / 卡片堆叠 / 磁吸 / 文字揭示 / SVG 路径 / 弹性 / 数字翻牌 / 3D 倾斜 / 玻璃拟态 / 极光渐变 / 粒子网络 / 水波纹 / 粘性滚动 / FLIP 共享元素 / View Transitions / AI 流式打字机 / 千层酥抽拉），外加 7 种手机端手感模式（原生手感滚动 snap / 滑动返回 / Tab 滑动切换 / 页面推入推出 push-pop / Bottom Sheet 底部抽屉 / 列表滑动操作 / 触感反馈）。基于 UI 模块类型（Hero、卡片、按钮、计数器、加载、弹窗、Onboarding、AI 对话气泡、移动端路由/列表等）从映射表 lookup 推荐模式，给出可直接复用的代码模板与避坑指南。
 type: design-pattern
-version: 2.1.0
+version: 2.4.0
 user-invocable: true
-argument-hint: "[module] [pattern-id 1-24] [--html] [--code-only]"
+argument-hint: "[module] [pattern-id 1-25+m] [--html] [--code-only]"
 license: MIT
 trigger:
   - 正在设计 UI 动效 / 交互动画 / 视觉运动
@@ -27,8 +27,8 @@ allowed-tools:
 
 # UI 交互 Skill · 高级模式选择与实现
 
-> 24 种核心交互模式 + 模块级映射表 + 决策树。
-> 配套 demo：`./10-ui-interactions.html`（①-⑩）+ `./advanced-ui-v2.html`（⑪-⑰）+ `./advanced-ui-v3.html`（⑱-㉔）
+> 25 种核心交互模式 + 15 种移动端手感/高级手感模式 + 8 种移动端组件与情绪模式 + 模块级映射表 + 决策树。
+> 配套 demo：`./10-ui-interactions.html`（①-⑩）+ `./advanced-ui-v2.html`（⑪-⑰）+ `./advanced-ui-v3.html`（⑱-㉕）+ `./mobile-ui.html`（㉖-㉜ 手机端试玩）+ `./mobile-ui-pro.html`（㉝-㊵ 高级手感试玩）+ `./mobile-ui-plus.html`（㊶-㊽ 组件与情绪试玩）
 > 配套技术手册：`./PATTERNS.md`（每种模式的完整代码模板 + 调参指南）
 
 ---
@@ -124,6 +124,24 @@ Pointer  光标     ⑨ 3D 倾斜                  ⑩ 玻璃
   ├─ 模块：详情/特性展示卡（hover 才有戏）
   │    └─ 推荐：⑨ 3D 倾斜 + 径向高光
   │
+  ├─ 模块：横向卡片轨道 / 全屏引导页（手机）
+  │    └─ 推荐：㉖ 原生手感滚动（scroll-snap）
+  │
+  ├─ 模块：二级页返回（手机 WebApp）
+  │    └─ 推荐：㉗ 滑动返回 + ㉙ push/pop 过渡
+  │
+  ├─ 模块：顶部 Tab（手机）
+  │    └─ 推荐：㉘ Tab 滑动切换（内容 snap 轨道 + 跟手指示器）
+  │
+  ├─ 模块：列表 → 详情（手机 WebApp 路由）
+  │    └─ 推荐：㉙ 推入/推出（下钻右进、返回右出）
+  │
+  ├─ 模块：地图 POI 卡 / 筛选面板 / 分享面板（手机）
+  │    └─ 推荐：㉚ Bottom Sheet（snap 点 + 拖拽收起）
+  │
+  ├─ 模块：消息/待办列表行操作（手机）
+  │    └─ 推荐：㉛ 滑动显露按钮 + ㉜ 触感
+  │
   └─ 模块：内容长文阅读页
        └─ 跳过所有！保留 ② 滚动触发（淡入即可）
 ```
@@ -203,6 +221,54 @@ Pointer  光标     ⑨ 3D 倾斜                  ⑩ 玻璃
 | **App 原生按钮** | ⑦ 弹性（按下） | UIImpactFeedback | 中 | 配合触感反馈 |
 | **触底反弹** | ⑦ 弹性 | k=0.06, d=0.65 | overscroll-behavior: contain | 注意 iOS rubber band 冲突 |
 
+### 3.6 ★ 移动端手感模式（㉖-㉜，手机专用）
+
+> agent 在做手机 H5 / WebApp / 小程序时**必须先查这张表**；这些模式解决「顺滑滑动 / 顺滑切换」，是原生 App 手感的分水岭。高级手感模式（㉝-㊵）见 §3.7。
+
+| UI 模块 | 推荐模式 | 关键参数 | 备选 | 注意事项 |
+|---------|---------|---------|------|---------|
+| **横向卡片轨道（首页/推荐）** | ㉖ snap 滚动 | 卡宽 min(78vw,320px)；mandatory | proximity | 禁 JS 劫持 touchmove；scroll 监听 rAF 节流 |
+| **全屏 Onboarding / Stories** | ㉖ snap 滚动 + `scroll-snap-stop: always` | 一屏一页 | ⑭ 粘性堆叠 | 桌面端 snap 改按钮翻页 |
+| **整页丝滑滚动（叙事落地页）** | ㉖ Lenis 式 lerp | lerp 0.08~0.12 | 原生滚动 | 信息流/列表页**禁用**平滑滚动 |
+| **二级页返回** | ㉗ 滑动返回 | 热区 24px；vx>0.5 提交 | 返回按钮 | 跟手阶段 transition:none；必须保留可见返回按钮 |
+| **顶部 Tab / 分段控制** | ㉘ Tab 滑动切换 | 指示器由 scrollLeft 驱动 | ⑦ 弹性指示器 | 选中态等 scrollend 再改；Tab ≤ 6 |
+| **列表 → 详情（路由下钻）** | ㉙ push/pop | 0.38s；旧页 -25% 视差 | ⑯ View Transitions | 双层必须同动；spring 做导航 = 廉价 |
+| **POI 详情卡 / 筛选面板** | ㉚ Bottom Sheet | 2~3 个 snap 点；backdrop 联动 | slide-up 弹层 | 速度+位移双判定；内容区恢复 pan-y |
+| **消息/待办列表行操作** | ㉛ 滑动显露 | 按钮宽 76px；行间互斥 | 长按菜单 | 必须保留可见替代入口；删除配撤销 |
+| **主按钮（CTA/发送）** | ㉜ 按压缩放 + 触感 | scale 0.96；vibrate ≤20ms | ⑬ 涟漪 | iOS Safari 无 vibrate，静默降级 |
+| **snap 吸附瞬间反馈** | ㉜ snap 触感（4ms） | ㉖⑳㉚ 配套 | 视觉闪烁 | 只在状态改变瞬间震，禁止高频 |
+| **长按呼出菜单** | ㉜ long-press 500ms | scale 1.03 + warn 震动 | ⋯ 按钮 | pointerup/cancel/leave 都要清 timer |
+
+### 3.7 ★ 高级移动端手感（㉝-㊵，「原生 App 级」细节）
+
+> 做完 §3.6 骨架后，按场景挑选这些「高阶细节」；每个都是原生 App 和 Web 之间最难被看破的手感差。组件与情绪模式（㊶-㊽）见 §3.8。
+
+| UI 模块 | 推荐模式 | 关键参数 | 备选 | 注意事项 |
+|---------|---------|---------|------|---------|
+| **内部滚动容器滚到顶回弹** | ㉝ 橡皮筋阻尼 | c=150 对数阻尼 | 原生 body 自带（别重复实现） | `scrollTop≤0` 才接管；松手带 1.2 过冲 |
+| **图片查看器 / 画布** | ㉞ Pinch-to-Zoom | origin 锁双指中点；吸附 1.8→2.4 | 双击 toggle | 必须 setPointerCapture + Pointer Map；配 +/− 按钮 |
+| **个人主页 / 详情页头图** | ㉟ 坍缩头图 | stretch +0.35 封顶；origin bottom | ① 视差 | 只动 transform + rAF；bar 与头图同半速 |
+| **歌单 / 收藏夹 / 看板排序** | ㊱ 拖拽排序 | 长按 300ms 浮起 scale 1.05 | 上/下移按钮 | 让位只动 transform；松手才结算 DOM；换位 snap 触感 |
+| **信息流 / 列表页顶部** | ㊲ 下拉刷新完整版 | 阈值 80px；四态状态机 | 系统原生（能覆盖就别自绘） | spinner 跟手旋转延续到 loading；完成态停 500ms |
+| **时间/值选择器、自绘滑轨** | ㊳ 惯性甩动 | 摩擦 0.94/frame；反弹 0.4× | ㉖ 原生 snap（能用就用） | 末速取最后 3~5 个 move；接住滑行中的新拖拽 |
+| **天气/故事/多任务卡片** | ㊴ 堆叠卡片 | scale 0.05/层；跟进系数 2x | ③ 卡片堆叠 | 只前层可拖；≤4 层；换层后重排事件 |
+| **高端 CTA / 播放器进度** | ㊵ 液态填充 | 追赶 0.12；凸起随速度 | ⑬ 涟漪 | 同屏 ≤2 个液态源；文字 mix-blend-mode: difference |
+
+### 3.8 ★ 移动端组件与情绪模式（㊶-㊽）
+
+> 反馈与状态类：解决「点完之后发生了什么」的感知问题。总原则见 PATTERNS「补充律 8/9」—— **反馈从触发点长出来；成功要克制**。
+
+| UI 模块 | 推荐模式 | 关键参数 | 备选 | 注意事项 |
+|---------|---------|---------|------|---------|
+| **Feed 图片点赞** | ㊶ 双击点赞爆裂 | 爱心从第二击坐标长出；连击 800ms 窗口 | ㊼ 计数 bump | 必须并存可见心形按钮；`touch-action: manipulation` |
+| **应用内通知横幅** | ㊷ 横滑关闭 | 微旋转 dx×0.05°；飞出后高度坍缩 | × 按钮 | 与 ㉛ 分工：㉛ 行内露按钮，㊷ 整卡离场；保留 × 按钮 |
+| **时间/时长/单位选择** | ㊸ 3D 滚轮 | perspective 在容器；原生 snap + scrollend | ㊳ fling / 原生 select | 底层保留 select/stepper 等价物 |
+| **深浅色主题切换** | ㊹ 圆形揭示 | 揭示起点=按钮中心；半径到最远角 | ⑯ VT fade | 无 VT/低端机降级直接翻转 |
+| **IM 语音消息** | ㊺ 按住说话 | 上滑 80px 取消；pointercancel=取消 | 点按录音模式 | 最短 500ms 防误触；发送/取消触感要区分 |
+| **Feed 首屏加载** | ㊻ 骨架屏 | 骨架与内容逐像素同尺寸；扫光用 transform | 转圈 | <300ms 到达不上骨架；>3s 换错误态 |
+| **消息/购物车角标** | ㊼ 角标弹跳 | 1.35 回弹 + 颜色脉冲；void offsetWidth retrigger | ⑧ 翻牌 | tabular-nums；连击合并 bump；配 aria-live |
+| **支付/发布成功** | ㊽ 庆祝粒子 | Canvas 130 粒从触点抛出；pointer-events:none | toast | 每用户流 ≤1 处；常规成功只 toast |
+
 ---
 
 ## 5. 模式速查表（详见 PATTERNS.md）
@@ -234,6 +300,29 @@ Pointer  光标     ⑨ 3D 倾斜                  ⑩ 玻璃
 | ㉓ | **命令栏 Cmd+K** | 全局快捷键唤起 + 模糊匹配 + 键盘导航 + 高亮 | Cmd/Ctrl+K，↑↓ Enter Esc | ⭐⭐⭐ |
 | ㉔ | **Blob Morph 液态形变** | SVG `<path>` 的 `d` 属性在同点数 path 间 GSAP morph | elastic.out(1, 0.6) | ⭐⭐ |
 | ㉕ | **Folding Drawer 千层酥抽拉** | 同位多卡 + data-stack-pos 阶梯偏移 → 顶卡向左前方 transform 抽出；wheel/touch/keyboard 三模驱动 | offset 20/14、scale 0.94→0.70、cubic-bezier(0.34,1.22,0.64,1) | ⭐⭐ |
+| ㉖ | **原生手感滚动** | 原生滚动 + scroll-snap 吸附 + overscroll-behavior 边界；禁 JS 劫持 | snap mandatory/proximity；lerp 0.1 | ⭐ |
+| ㉗ | **滑动返回** | 左缘热区 pointerdown → 页面 translateX 跟手 → 位移/速度双判定提交或回弹 | 热区 24px；vx>0.5px/ms 提交 | ⭐⭐⭐ |
+| ㉘ | **Tab 滑动切换** | 内容=横向 snap 轨道，指示器 translateX 由 scrollLeft 驱动（免费惯性） | 指示器无 transition；scrollend 更新选中 | ⭐⭐ |
+| ㉙ | **页面推入/推出** | 新页 translateX(100%→0)，旧页 -25% 视差后退+变暗，双层同动 | 0.38s；cubic-bezier(0.32,0.72,0,1) | ⭐⭐ |
+| ㉚ | **底部抽屉 Bottom Sheet** | 2~3 个 snap 点 + handle 跟手拖拽 + 速度判定归位 + backdrop 联动 | \|vy\|>0.5 甩动直达；handle 热区 44px | ⭐⭐⭐ |
+| ㉛ | **列表项滑动操作** | 行内容层跟手 translateX 垫底露出操作钮；过半展开/回弹；行间互斥 | 按钮 76px/个；右侧 dx/4 阻尼 | ⭐⭐ |
+| ㉜ | **触感反馈 + 按压缩放** | active scale 0.96 + navigator.vibrate 波形表（tap/snap/success/warn） | 单脉冲 ≤20ms；长按 500ms 放大 | ⭐ |
+| ㉝ | **橡皮筋阻尼** | 到顶续拉按 `c*(1-1/(dx/c+1))` 阻尼跟手，松手 spring 回弹 | c≈150；回弹带 1.2 过冲 | ⭐⭐ |
+| ㉞ | **捏合缩放 Pinch** | 双指距离比 × baseScale，origin 锁双指中点，松手吸附/回弹 | 边界 0.4~3；吸附阈值 1.8→2.4 | ⭐⭐⭐ |
+| ㉟ | **坍缩头图** | 下拉 scale stretch（origin bottom）+ 上滚半速视差 + 吸顶收敛 | stretch ≤ +0.35；视差 0.5× | ⭐⭐ |
+| ㊱ | **长按拖拽排序** | 长按 300ms 浮起 → 让位用 transform 预览 → 松手才结算 DOM | scale 1.05；让位 0.25s iOS 曲线 | ⭐⭐⭐ |
+| ㊲ | **完整下拉刷新** | 阻尼跟手 + spinner 跟手旋转 + 四态状态机（idle/pulling/loading/done） | 阈值 80px；完成态停 500ms | ⭐⭐ |
+| ㊳ | **惯性甩动 Fling** | release 末速延续，rAF 中 `v *= 0.94` 摩擦衰减 + 边界 0.4 倍反弹 | 摩擦 0.94/frame；起甩 0.15px/ms | ⭐⭐ |
+| ㊴ | **堆叠卡片页** | 多层 scale 递减退后，前层拖动时后层按 2× 进度提前跟进 | scale 0.05/层；跟进系数 2 | ⭐⭐⭐ |
+| ㊵ | **液态填充 Liquid** | SVG 贝塞尔前沿随进度推进，凸起随速度变化（表面张力感） | 追赶 0.12/frame；凸起 14+60×|d| | ⭐⭐ |
+| ㊶ | **双击点赞爆裂** | 250ms 双击 → 第二击坐标 spawn 爱心 scale 弹出 + 漂浮 + 连击计数 | 过冲 1.3；连击窗口 800ms | ⭐⭐ |
+| ㊷ | **横滑关闭通知** | 整卡 translateX 跟手 + 微旋转 → 阈值飞出 → 高度坍缩合洞 | 旋转 dx×0.05°；opacity 下限 0.45 | ⭐⭐ |
+| ㊸ | **3D 滚轮选择器** | item 距中心偏移 → rotateX 圆柱面 + 原生 snap 滚动 + scrollend 落定 | 22°/档；translateZ 中心 28px | ⭐⭐⭐ |
+| ㊹ | **主题圆形揭示** | 记录按钮坐标 → startViewTransition + clip-path circle 从触点扩散 | 半径到最远角；480ms iOS 曲线 | ⭐⭐ |
+| ㊺ | **按住说话** | 按住起波形抖动+计时，上滑 80px 切取消态，pointercancel 静默取消 | 波形 110ms 节拍；最短 500ms | ⭐⭐⭐ |
+| ㊻ | **骨架屏 Shimmer** | transform 扫光 + 骨架与内容逐像素同尺寸 + 完成重叠过渡 | 周期 1.4s；完成 0.3s 淡入上移 | ⭐ |
+| ㊼ | **角标弹跳 Badge Bump** | 数字变化 scale 1.35 回弹 + 颜色脉冲 + 「+N」飞出；void offsetWidth retrigger | 1.35 回弹；+N 只在 delta≥2 | ⭐ |
+| ㊽ | **庆祝粒子 Confetti** | Canvas 100~150 emoji 从触发点抛出，重力 0.35，落完自动停 rAF | 130 粒；每用户流只 1 处 | ⭐⭐ |
 
 ---
 
@@ -259,6 +348,17 @@ Pointer  光标     ⑨ 3D 倾斜                  ⑩ 玻璃
 | **Data Story Scroll** | ㉒ 滚动驱动数字 + ⑭ 粘性堆叠 + ⑳ 噪点 | 财报页 / 数据长图 / 年度回顾 |
 | **Liquid Showcase** | ㉔ Blob Morph + ⑰ 流式打字机 + ⑲ H-Scroll | Stripe 风落地 / Loading / 空状态 |
 | **Color Card Stack** | ㉕ Folding Drawer + ⑤ 揭示（顶卡标题） + ⑧ 翻牌（counter） | 配色面板 / 设计系统色卡 / 主题浏览 |
+| **Native App Feel**（手机） | ㉙ push/pop（路由） + ㉗ 滑动返回 + ㉜ 触感（按钮） | 类原生手机 WebApp 的骨架 |
+| **Mobile Feed Premium**（手机） | ㉖ snap 轨道（横滑区） + ㉛ 滑动操作（列表） + ㉜ 按压（CTA） | 首页信息流 |
+| **Map / POI App**（手机） | ㉚ Bottom Sheet + ㉖ snap（卡片轨道） + ⑩ 玻璃（顶栏） | 地图、外卖、点评 |
+| **Tabbed Home**（手机） | ㉘ Tab 滑动切换 + ⑤ 揭示（首屏） + ㉜ snap 触感 | 社区/资讯首页 |
+| **iOS-Grade Profile**（手机） | ㉟ 坍缩头图 + ㊲ 下拉刷新 + ㉜ 触感 | 个人主页 / 详情页 |
+| **Gallery Viewer**（手机） | ㉞ Pinch 缩放 + ㉗ 滑动返回 + ㉜ 触感 | 相册 / IM 图片 / 地图 |
+| **Power Editor List**（手机） | ㊱ 拖拽排序 + ㉛ 滑动操作 + ㉜ 长按菜单 | 歌单 / 看板 / 收藏夹 |
+| **Immersive Stack App**（手机） | ㊴ 堆叠卡片 + ㉝ 橡皮筋 + ㊵ 液态 CTA | 天气 / 故事 / 沉浸式卡片 App |
+| **Social Feed Premium**（手机） | ㊶ 双击点赞 + ㊼ 角标 bump + ㊻ 骨架屏 | 社区 / 图片流 |
+| **Checkout Flow**（手机） | ㊹ 圆形主题揭示 + ㊽ 庆祝粒子（仅支付成功） + ㉜ 触感 | 电商结算 / 下单完成 |
+| **Messenger Feel**（手机） | ㊺ 按住说话 + ㊷ 横滑关闭通知 + ㊼ 未读角标 | IM / 私信 |
 
 ---
 
@@ -290,6 +390,30 @@ Pointer  光标     ⑨ 3D 倾斜                  ⑩ 玻璃
 - ❌ **Folding Drawer 用旋转/折叠 3D 效果** → 用户实测反馈：千层酥视觉必须纯抽拉，旋转显得廉价
 - ❌ **Folding Drawer 末位卡 opacity 0** → 千层酥的核心是「边缘可见」，末位保留 ≥ 0.18
 - ❌ **Folding Drawer 书签做独立列表** → 失去「从卡延伸出来」的物理感；书签必须是 .card 子元素，跟着 transform 走
+- ❌ **JS 劫持 touchmove 手写滚动/翻页** → 惯性丢失 + 掉帧；原生滚动 + scroll-snap 白送的手感
+- ❌ **拖拽跟手阶段开着 CSS transition** → 永远慢半拍；pointerdown 先 `transition: none`
+- ❌ **手势判定只看位移不看速度** → 快速轻扫无反应，「失灵」感；必须速度+位移双判定
+- ❌ **push/pop 导航只有新页动** → 一眼 Web 味；双层同动（新页滑入 + 旧页 -25% 视差）是灵魂
+- ❌ **手势做唯一入口**（无返回按钮/无可见操作按钮） → 可访问性崩 + 新用户找不到路
+- ❌ **整个 sheet 设 `touch-action: none`** → 内容区没法竖向滚动；只在 handle 区禁
+- ❌ **滑动操作无互斥** → 多行同时展开，界面失控
+- ❌ **高频触感震动** → 蜂鸣器既视感 + 耗电；只在状态改变瞬间震
+- ❌ **内滚容器漏 `overscroll-behavior: contain`** → 滚到头传染给页面，用户「被甩走」
+- ❌ **橡皮筋 1:1 跟手无阻尼** → 没有重量感；对数阻尼公式 `c*(1-1/(dx/c+1))` 是灵魂
+- ❌ **Pinch 的 transform-origin 固定 center** → 缩放围绕中心转，手指位置「漂移」，一眼假
+- ❌ **拖拽排序换位实时 insertBefore** → 每次换位整表重排闪烁；让位 transform 预览，松手结算
+- ❌ **fling 速度取整段平均** → 起手慢稀释末速；只取 release 前最后 3~5 个 move
+- ❌ **堆叠卡片后层不跟进** → 看不出「一叠」；前层进度 ×2 让后层提前就位
+- ❌ **液态按钮前沿是直线** → 那是普通进度条；贝塞尔凸起 + 速度响应才是「液态」
+- ❌ **stretch 头图 origin 在 center** → 底部露缝；origin 必须 `50% 100%`
+- ❌ **手势做唯一入口**（pinch/排序/刷新无按钮等价物） → 可访问性崩，见补充律 7
+- ❌ **双击爱心从卡片中心冒出** → 违反「反馈从触发点长出来」（补充律 8）；用第二击坐标
+- ❌ **横滑通知飞走后留洞** → 高度坍缩必须做；洞不合上列表视觉断裂
+- ❌ **滚轮手写惯性** → 原生 snap 滚动的惯性最顺；自绘掉帧还失手感
+- ❌ **主题揭示起点在屏幕中心** → 失去因果感；从按钮坐标扩散
+- ❌ **pointercancel 当成功处理（语音发送）** → 来电中断发半句话，事故级 bug
+- ❌ **骨架屏尺寸是猜的** → 内容到达瞬间布局跳动 —— 骨架的全部意义就是消抖
+- ❌ **常规成功也撒花** → 庆祝通货膨胀；每用户流 ≤1 处（补充律 9）
 
 ### 6.2 错配缓动
 
@@ -362,6 +486,29 @@ if (motionQuery.matches) {
 | ㉓ 命令栏 | 仅在导航菜单展示所有功能 |
 | ㉔ Blob Morph | 静态 SVG 形状 |
 | ㉕ Folding Drawer | 普通轮播（无 transform，fade-in 切换） |
+| ㉖ 原生手感滚动 | 关 snap + 关平滑滚动，原生直接跳 |
+| ㉗ 滑动返回 | 返回按钮直接后退，无手势无动画 |
+| ㉘ Tab 滑动切换 | 点 Tab 即时切换，指示器直接跳位 |
+| ㉙ 页面推入/推出 | 即时切换无过渡 |
+| ㉚ Bottom Sheet | 直接显隐，无 snap 拖拽 |
+| ㉛ 列表项滑动操作 | 只保留可见按钮/长按菜单 |
+| ㉜ 触感 + 按压缩放 | 去掉 scale 动画与震动，即时色变反馈 |
+| ㉝ 橡皮筋阻尼 | 无拉扯，滚动直接停在边界 |
+| ㉞ Pinch 缩放 | +/− 按钮直接跳档缩放 |
+| ㉟ 坍缩头图 | 头图静态，吸顶导航直接切换 |
+| ㊱ 拖拽排序 | 只保留上移/下移按钮 |
+| ㊲ 下拉刷新 | 可见刷新按钮，无跟手动画 |
+| ㊳ 惯性甩动 | 释放后缓动到最近刻度 |
+| ㊴ 堆叠卡片 | fade 切换层 |
+| ㊵ 液态填充 | 纯色态切换（液态层 display:none） |
+| ㊶ 双击点赞 | 只保留心形按钮（无 burst） |
+| ㊷ 横滑关闭 | 只保留 × 按钮，即时移除 |
+| ㊸ 3D 滚轮 | 平面 snap 列表（无 3D 变换） |
+| ㊹ 圆形揭示 | 直接翻转 class，无过渡 |
+| ㊺ 按住说话 | 点按开始/停止录音模式，波形静态 |
+| ㊻ 骨架屏 | 静态灰块（扫光停止），aria-busy 保留 |
+| ㊼ 角标弹跳 | 无 scale 无飞字，颜色一闪 + aria-live 播报 |
+| ㊽ 庆祝粒子 | 不喷；触感 success 保留 |
 
 **三冗余原则**：关键状态变化必须**颜色 + 形状 + 文本**三重提示，不只靠动效。
 
@@ -458,7 +605,13 @@ if (motionQuery.matches) {
 
 - **核心 demo（模式 ①-⑩）**：`./10-ui-interactions.html`
 - **进阶 demo（模式 ⑪-⑰）**：`./advanced-ui-v2.html`
-- **前沿 demo（模式 ⑱-㉔）**：`./advanced-ui-v3.html`
+- **前沿 demo（模式 ⑱-㉕）**：`./advanced-ui-v3.html`
+- **移动端手感 demo（模式 ㉖-㉜，手机打开试玩）**：`./mobile-ui.html`
+- **高级移动端手感 demo（模式 ㉝-㊵，手机打开试玩）**：`./mobile-ui-pro.html`
+- **移动端组件与情绪 demo（模式 ㊶-㊽，手机打开试玩）**：`./mobile-ui-plus.html`
+- **配方应用 demo（社区 Feed 配方）**：`./demo-social-feed.html`
+- **配方应用 demo（电商结算流配方）**：`./demo-checkout.html`
+- **配方应用 demo（IM 私信配方）**：`./demo-messenger.html`
 - **模式技术细节 + 代码模板**：`./PATTERNS.md`
 - **速查索引**：`./INDEX.md`
 - **对抗性测试场景**：`./evals/scenarios.md`

@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>结算流 · Checkout Flow</title>
+<style>
+:root{
+  --bg:#0e0f13; --panel:#171921; --panel-2:#1e212c; --ink:#f2f3f7; --ink-dim:#9aa0b4;
+  --accent:#6ea8fe; --accent-2:#b18cf5; --danger:#ff5a6e; --ok:#4ade80;
+  --ios-ease:cubic-bezier(0.32,0.72,0,1);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",sans-serif;
+  height:100dvh;overflow:hidden;display:flex;justify-content:center;
+}
+.stage{
+  position:relative;width:min(420px,100%);height:100dvh;overflow:hidden;
+  background:var(--bg);
+}
+.page{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  transition:transform .42s var(--ios-ease), opacity .42s var(--ios-ease);
+  background:var(--bg);
+  padding-top:env(safe-area-inset-top);
+}
+.page.enter-from-right{transform:translateX(100%);transition:none;opacity:1}
+.page.below{transform:translateX(-25%);opacity:.6}
+.page.gone-right{transform:translateX(100%);opacity:1}
+.page.hidden-page{display:none}
+.topbar{
+  flex:0 0 auto;display:flex;align-items:center;gap:12px;
+  padding:14px 16px;font-weight:700;font-size:17px;
+}
+.back{
+  width:34px;height:34px;border-radius:50%;border:none;background:var(--panel);
+  color:var(--ink);font-size:16px;cursor:pointer;flex:0 0 auto;
+  transition:transform .18s var(--ios-ease);touch-action:manipulation;
+}
+.back:active{transform:scale(.92)}
+.topbar .title{flex:1}
+.iconbtn{
+  position:relative;width:34px;height:34px;border-radius:50%;border:none;
+  background:var(--panel);color:var(--ink);font-size:16px;cursor:pointer;
+  transition:transform .18s var(--ios-ease);touch-action:manipulation;
+}
+.iconbtn:active{transform:scale(.92)}
+.badge{
+  position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:9px;
+  background:var(--danger);color:#fff;font-size:11px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;padding:0 4px;
+  transform:scale(0);transition:transform .3s cubic-bezier(0.34,1.56,0.64,1);
+}
+.badge.show{transform:scale(1)}
+.badge.bump{animation:badgeBump .45s cubic-bezier(0.34,1.56,0.64,1)}
+@keyframes badgeBump{0%{transform:scale(1)}35%{transform:scale(1.35)}100%{transform:scale(1)}}
+.fly-n{
+  position:fixed;z-index:99;font-size:12px;font-weight:700;color:var(--danger);
+  pointer-events:none;animation:flyN .6s var(--ios-ease) forwards;
+}
+@keyframes flyN{
+  0%{opacity:1;transform:translate(0,0) scale(1)}
+  100%{opacity:0;transform:translate(var(--fx),var(--fy)) scale(.5)}
+}
+.scroll{flex:1;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 16px 24px}
+.note{
+  margin:8px 16px 0;padding:10px 12px;border-radius:12px;background:var(--panel);
+  color:var(--ink-dim);font-size:12px;line-height:1.6;
+}
+/* ---------- 商品列表页 ---------- */
+.gcard{
+  position:relative;display:flex;gap:12px;align-items:center;
+  background:var(--panel);border-radius:16px;padding:12px;margin-bottom:12px;
+  overflow:hidden;
+}
+.gthumb{width:72px;height:72px;border-radius:12px;font-size:34px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.ginfo{flex:1;min-width:0}
+.gname{font-weight:600;font-size:15px;margin-bottom:4px}
+.gsub{color:var(--ink-dim);font-size:12px}
+.gprice{font-weight:800;font-size:16px;margin-top:6px}
+.addbtn{
+  position:absolute;right:12px;bottom:12px;width:30px;height:30px;border-radius:50%;
+  border:none;background:var(--accent);color:#0e0f13;font-size:18px;font-weight:800;
+  cursor:pointer;touch-action:manipulation;
+  transition:transform .18s cubic-bezier(0.34,1.56,0.64,1);
+}
+.addbtn:active{transform:scale(.85)}
+/* ---------- 结算页 ---------- */
+.sumline{display:flex;justify-content:space-between;padding:14px 0;font-size:14px;color:var(--ink-dim)}
+.sumline.total{font-size:17px;font-weight:800;color:var(--ink);border-top:1px solid var(--panel-2);margin-top:4px}
+.paybtn{
+  margin:16px 0 calc(16px + env(safe-area-inset-bottom));
+  width:100%;height:52px;border-radius:16px;border:none;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  color:#0e0f13;font-size:16px;font-weight:800;cursor:pointer;
+  touch-action:manipulation;transition:transform .18s var(--ios-ease);
+}
+.paybtn:active{transform:scale(.97)}
+.addr{
+  background:var(--panel);border-radius:16px;padding:14px;margin-bottom:12px;
+  font-size:14px;line-height:1.6;
+}
+.addr .lab{color:var(--ink-dim);font-size:12px;margin-bottom:2px}
+/* ---------- 成功页 ---------- */
+#page-success{justify-content:center;align-items:center;text-align:center;gap:0}
+.okring{
+  width:88px;height:88px;border-radius:50%;background:var(--ok);
+  display:flex;align-items:center;justify-content:center;
+  font-size:40px;color:#0e0f13;font-weight:900;
+  transform:scale(0);animation:okPop .55s cubic-bezier(0.34,1.56,0.64,1) .15s forwards;
+}
+@keyframes okPop{to{transform:scale(1)}}
+#page-success h2{margin-top:20px;font-size:20px}
+#page-success p{margin-top:8px;color:var(--ink-dim);font-size:13px}
+#fx{position:absolute;inset:0;pointer-events:none;z-index:50}
+.backhome{
+  margin-top:24px;padding:12px 28px;border-radius:14px;border:none;
+  background:var(--panel);color:var(--ink);font-size:14px;font-weight:600;
+  cursor:pointer;touch-action:manipulation;transition:transform .18s var(--ios-ease);
+}
+.backhome:active{transform:scale(.95)}
+/* ---------- 主题切换（圆形揭示由 View Transition clip-path 完成） ---------- */
+::view-transition-old(root){animation:none;mix-blend-mode:normal}
+::view-transition-new(root){animation:none;mix-blend-mode:normal}
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.01ms !important;transition-duration:.01ms !important}
+  .page{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- 页面 1：商品列表 -->
+  <div class="page" id="page-list">
+    <div class="topbar">
+      <div class="title">商品列表</div>
+      <button class="iconbtn" id="themeBtn" aria-label="切换主题">🌓<span class="badge" id="cartBadge">0</span></button>
+      <button class="iconbtn" id="cartBtn" aria-label="购物车">🛒<span class="badge show" id="cartBadge2">2</span></button>
+    </div>
+    <div class="note">拖动卡片左缘可返回上一页（结算 → 列表）。点 ➕ 看角标弹跳与「+1」飞入；点「去结算」进入推入式下级页。</div>
+    <div class="scroll" id="goodsList"></div>
+    <button class="paybtn" id="toCheckout" style="margin:0 16px 20px">去结算</button>
+  </div>
+
+  <!-- 页面 2：结算 -->
+  <div class="page hidden-page" id="page-checkout">
+    <div class="topbar">
+      <button class="back" id="backBtn" aria-label="返回">‹</button>
+      <div class="title">确认订单</div>
+    </div>
+    <div class="scroll">
+      <div class="addr">
+        <div class="lab">配送至</div>
+        <b>林知远</b> 138****6688<br>杭州市西湖区文三路 138 号 3 幢 502 室
+      </div>
+      <div id="orderItems"></div>
+      <div class="sumline"><span>商品</span><span id="sumCount">0 件</span></div>
+      <div class="sumline"><span>运费</span><span>免运费</span></div>
+      <div class="sumline"><span>优惠券</span><span style="color:var(--ok)">-¥6.00</span></div>
+      <div class="sumline total"><span>合计</span><span id="sumTotal">¥0</span></div>
+      <button class="paybtn" id="payBtn">支付 ¥<span id="payTotal">0</span></button>
+    </div>
+  </div>
+
+  <!-- 页面 3：支付成功 -->
+  <div class="page hidden-page" id="page-success">
+    <canvas id="fx"></canvas>
+    <div class="okring">✓</div>
+    <h2>支付成功</h2>
+    <p>订单已提交 · 预计 3 日内送达</p>
+    <button class="backhome" id="backHome">返回首页</button>
+  </div>
+
+</div>
+
+<script>
+(function(){
+'use strict';
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const haptic = p => { try{ navigator.vibrate && navigator.vibrate(p); }catch(e){} };
+const HAPTIC = { tap:8, bump:12, success:[16,40,24] };
+
+/* ---------- 数据 ---------- */
+const GOODS = [
+  {n:'机械键盘 68 键', s:'客制化 · 热插拔轴体', p:399, e:'⌨️', bg:'#26314a'},
+  {n:'降噪耳机 Pro', s:'主动降噪 · 42 小时续航', p:1299, e:'🎧', bg:'#3a2a4a'},
+  {n:'桌面显示器灯', s:'非对称前投光 · 无频闪', p:199, e:'💡', bg:'#2a3f38'},
+  {n:'无线充电板', s:'15W 快充 · 磁吸对位', p:149, e:'⚡', bg:'#4a3a2a'},
+];
+let cart = 2; // 初始角标
+
+/* ---------- 商品列表 ---------- */
+const listEl = document.getElementById('goodsList');
+GOODS.forEach((g,i)=>{
+  const card = document.createElement('div');
+  card.className = 'gcard';
+  card.innerHTML =
+    '<div class="gthumb" style="background:'+g.bg+'">'+g.e+'</div>'+
+    '<div class="ginfo"><div class="gname">'+g.n+'</div>'+
+    '<div class="gsub">'+g.s+'</div>'+
+    '<div class="gprice">¥'+g.p+'</div></div>';
+  const add = document.createElement('button');
+  add.className = 'addbtn'; add.textContent = '+'; add.setAttribute('aria-label','加入购物车 '+g.n);
+  add.addEventListener('click', e=>{ addToCart(e, add); });
+  card.appendChild(add);
+  listEl.appendChild(card);
+});
+
+/* ---------- ㊼ 角标弹跳 + 「+1」飞入 ---------- */
+const badge2 = document.getElementById('cartBadge2');
+const badge1 = document.getElementById('cartBadge');
+function setBadge(b, n){
+  b.textContent = n;
+  b.classList.toggle('show', n > 0);
+}
+function addToCart(e, btn){
+  cart++;
+  setBadge(badge2, cart);
+  badge2.classList.remove('bump'); void badge2.offsetWidth; badge2.classList.add('bump');
+  haptic(HAPTIC.bump);
+  // 「+1」从按钮飞向角标
+  if(!reduced){
+    const from = btn.getBoundingClientRect();
+    const to = badge2.getBoundingClientRect();
+    const fly = document.createElement('span');
+    fly.className = 'fly-n'; fly.textContent = '+1';
+    fly.style.left = (from.left + from.width/2 - 6) + 'px';
+    fly.style.top = (from.top) + 'px';
+    fly.style.setProperty('--fx', (to.left - from.left - from.width/2 + 6) + 'px');
+    fly.style.setProperty('--fy', (to.top - from.top) + 'px');
+    document.body.appendChild(fly);
+    setTimeout(()=>fly.remove(), 650);
+  }
+}
+setBadge(badge2, cart);
+
+/* ---------- ㊹ 主题圆形揭示（View Transition，从按钮坐标扩散） ---------- */
+const themeBtn = document.getElementById('themeBtn');
+let dark = true;
+themeBtn.addEventListener('click', ()=>{
+  const r = themeBtn.getBoundingClientRect();
+  const x = r.left + r.width/2, y = r.top + r.height/2;
+  const rad = Math.hypot(Math.max(x, innerWidth-x), Math.max(y, innerHeight-y));
+  dark = !dark;
+  document.documentElement.style.setProperty('--bg', dark ? '#0e0f13' : '#f2f3f7');
+  document.documentElement.style.setProperty('--ink', dark ? '#f2f3f7' : '#1a1c24');
+  document.documentElement.style.setProperty('--ink-dim', dark ? '#9aa0b4' : '#5c6272');
+  document.documentElement.style.setProperty('--panel', dark ? '#171921' : '#ffffff');
+  document.documentElement.style.setProperty('--panel-2', dark ? '#1e212c' : '#e8eaf0');
+  const apply = ()=>{
+    vtStyle.textContent =
+      '::view-transition-old(root){animation:revealOut .5s var(--ios-ease) forwards}'+
+      '::view-transition-new(root){animation:revealIn .5s var(--ios-ease) forwards}'+
+      '@keyframes revealIn{from{clip-path:circle(0px at '+x+'px '+y+'px)}to{clip-path:circle('+rad+'px at '+x+'px '+y+'px)}}'+
+      '@keyframes revealOut{from{clip-path:circle('+rad+'px at '+x+'px '+y+'px)}to{clip-path:circle('+rad+'px at '+x+'px '+y+'px)}}';
+  };
+  if(!reduced && document.startViewTransition){
+    document.startViewTransition(apply);
+  } else { apply(); }
+  haptic(HAPTIC.tap);
+});
+const vtStyle = document.createElement('style');
+document.head.appendChild(vtStyle);
+
+/* ---------- ㉙ push / pop 路由 ---------- */
+const pages = {
+  list: document.getElementById('page-list'),
+  checkout: document.getElementById('page-checkout'),
+  success: document.getElementById('page-success'),
+};
+let current = pages.list;
+function renderOrder(){
+  const box = document.getElementById('orderItems');
+  box.innerHTML = '';
+  let total = 0, count = 0;
+  GOODS.slice(0, Math.min(3, Math.max(1, cart-1))).forEach(g=>{
+    total += g.p; count++;
+    const row = document.createElement('div');
+    row.className = 'gcard';
+    row.innerHTML =
+      '<div class="gthumb" style="background:'+g.bg+'">'+g.e+'</div>'+
+      '<div class="ginfo"><div class="gname">'+g.n+'</div>'+
+      '<div class="gsub">'+g.s+'</div>'+
+      '<div class="gprice">¥'+g.p+'</div></div>';
+    box.appendChild(row);
+  });
+  total = Math.max(0, total - 6);
+  document.getElementById('sumCount').textContent = count + ' 件';
+  document.getElementById('sumTotal').textContent = '¥' + total;
+  document.getElementById('payTotal').textContent = total;
+}
+function pushPage(next){
+  next.classList.remove('hidden-page');
+  next.classList.add('enter-from-right');
+  void next.offsetWidth;
+  next.classList.remove('enter-from-right');
+  if(!reduced) current.classList.add('below');
+  haptic(HAPTIC.tap);
+  current = next;
+}
+function popPage(){
+  const cur = current;
+  let prev = pages.list;
+  if(cur === pages.success) prev = pages.checkout;
+  prev.classList.remove('hidden-page');
+  prev.style.transition = 'none';
+  prev.classList.remove('below');
+  void prev.offsetWidth;
+  prev.style.transition = '';
+  cur.classList.add('gone-right');
+  setTimeout(()=>{ cur.classList.add('hidden-page'); cur.classList.remove('gone-right'); }, 450);
+  current = prev;
+  haptic(HAPTIC.tap);
+}
+document.getElementById('toCheckout').addEventListener('click', ()=>{
+  renderOrder();
+  pushPage(pages.checkout);
+});
+document.getElementById('backBtn').addEventListener('click', popPage);
+document.getElementById('backHome').addEventListener('click', popPage);
+document.getElementById('cartBtn').addEventListener('click', ()=>{
+  renderOrder(); pushPage(pages.checkout);
+});
+
+/* ---------- 左缘滑动返回（结算页 / 成功页） ---------- */
+const swipeBack = document.getElementById('page-checkout');
+let sb = null;
+swipeBack.addEventListener('pointerdown', e=>{
+  if(e.clientX > 32 || e.pointerType === 'mouse') return;
+  sb = { x0:e.clientX, moved:false, el:swipeBack };
+  swipeBack.style.transition = 'none';
+  swipeBack.setPointerCapture(e.pointerId);
+});
+swipeBack.addEventListener('pointermove', e=>{
+  if(!sb) return;
+  const dx = Math.max(0, e.clientX - sb.x0);
+  if(dx > 6) sb.moved = true;
+  swipeBack.style.transform = 'translateX(' + dx + 'px)';
+});
+function endSb(e){
+  if(!sb) return;
+  const dx = Math.max(0, e.clientX - sb.x0);
+  swipeBack.style.transition = '';
+  if(dx > swipeBack.clientWidth * 0.4){
+    popPage();
+    swipeBack.style.transform = '';
+  } else {
+    swipeBack.style.transform = '';
+  }
+  sb = null;
+}
+swipeBack.addEventListener('pointerup', endSb);
+swipeBack.addEventListener('pointercancel', e=>{
+  if(sb){ swipeBack.style.transition=''; swipeBack.style.transform=''; sb=null; }
+});
+
+/* ---------- ㊽ 支付成功 + 预渲染粒子 ---------- */
+const fx = document.getElementById('fx');
+const ctx = fx.getContext('2d');
+const FX_DPR = Math.min(devicePixelRatio || 1, 2);
+let sprites = null;
+function buildSprites(){
+  const chars = ['🎉','🎊','✨','💜'];
+  const out = [];
+  chars.forEach(ch => [18, 26, 34].forEach(size=>{
+    const c = document.createElement('canvas');
+    const s = Math.ceil(size * FX_DPR);
+    c.width = s; c.height = s;
+    const cc = c.getContext('2d');
+    cc.font = s + 'px serif';
+    cc.textBaseline = 'middle'; cc.textAlign = 'center';
+    cc.fillText(ch, s/2, s/2);
+    out.push({ img:c, size });
+  }));
+  return out;
+}
+let particles = [], fxOn = false;
+function burstConfetti(){
+  if(reduced) return;
+  const w = fx.clientWidth, h = fx.clientHeight;
+  fx.width = w * FX_DPR; fx.height = h * FX_DPR;
+  if(!sprites) sprites = buildSprites();
+  const N = w < 480 ? 60 : 90;
+  particles = [];
+  for(let i=0;i<N;i++){
+    const ang = Math.PI * (0.15 + Math.random()*0.7); // 向上抛
+    const sp = 6 + Math.random() * 9;
+    particles.push({
+      x: w/2 + (Math.random()-0.5)*60, y: h*0.45,
+      vx: Math.cos(ang)*sp*(Math.random()<.5?-1:1)*.7,
+      vy: -Math.sin(ang)*sp,
+      rot: Math.random()*Math.PI*2, vr:(Math.random()-0.5)*0.3,
+      img: sprites[(Math.random()*sprites.length)|0],
+      life: 1,
+    });
+  }
+  if(!fxOn){ fxOn = true; requestAnimationFrame(fxLoop); }
+}
+function fxLoop(){
+  ctx.setTransform(FX_DPR,0,0,FX_DPR,0,0);
+  ctx.clearRect(0,0,fx.clientWidth,fx.clientHeight);
+  particles.forEach(p=>{
+    p.vy += 0.35; p.vx *= 0.985;
+    p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+    if(p.y > fx.clientHeight*0.9) p.life -= 0.03;
+  });
+  particles = particles.filter(p=>p.life > 0);
+  particles.forEach(p=>{
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.setTransform(FX_DPR,0,0,FX_DPR,p.x,p.y);
+    ctx.rotate(p.rot);
+    ctx.drawImage(p.img, -p.size/2, -p.size/2, p.size, p.size);
+  });
+  ctx.globalAlpha = 1;
+  if(particles.length){ requestAnimationFrame(fxLoop); }
+  else { fxOn = false; ctx.clearRect(0,0,fx.clientWidth,fx.clientHeight); }
+}
+document.getElementById('payBtn').addEventListener('click', ()=>{
+  haptic(HAPTIC.success);
+  pushPage(pages.success);
+  setTimeout(burstConfetti, 350);
+});
+})();
+</script>
+</body>
+</html>

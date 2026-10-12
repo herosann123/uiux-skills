@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>高级移动端手感 8 模式 · ㉝-㊵ Demo</title>
+<style>
+  :root {
+    --bg: #0e0f13;
+    --panel: #171921;
+    --panel-2: #1e212c;
+    --ink: #f2f3f7;
+    --ink-dim: #9aa0b4;
+    --accent: #6ea8fe;
+    --accent-2: #b18cf5;
+    --ok: #4ade80;
+    --ios-ease: cubic-bezier(0.32, 0.72, 0, 1);
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--ink); line-height: 1.5;
+    max-width: 560px; margin: 0 auto;
+    padding: 20px 16px calc(60px + env(safe-area-inset-bottom));
+  }
+  header.pagehead { text-align: center; padding: 18px 0 6px; }
+  header.pagehead h1 { font-size: 22px; }
+  header.pagehead p { color: var(--ink-dim); font-size: 13px; margin-top: 6px; }
+
+  section.demo {
+    margin-top: 40px; background: var(--panel);
+    border: 1px solid rgba(255,255,255,.06); border-radius: var(--radius);
+    padding: 18px 16px 22px;
+  }
+  .demo-head { display: flex; align-items: baseline; gap: 10px; }
+  .demo-head .pid {
+    font-size: 12px; font-weight: 700; color: var(--accent-2);
+    background: rgba(177,140,245,.14);
+    padding: 2px 8px; border-radius: 99px; white-space: nowrap;
+  }
+  .demo-head h2 { font-size: 17px; }
+  .demo-desc { color: var(--ink-dim); font-size: 13px; margin: 6px 0 16px; }
+  .demo-desc b { color: var(--ink); }
+  .hint { margin-top: 12px; font-size: 12px; color: var(--ink-dim); text-align: center; }
+
+  .frame {
+    position: relative; border-radius: 14px; overflow: hidden;
+    background: #0b0d12;
+  }
+  .rowline {
+    padding: 12px 14px; border-radius: 12px; margin-bottom: 8px;
+    background: rgba(255,255,255,.05); font-size: 14px;
+    display: flex; justify-content: space-between;
+  }
+
+  /* ========== ㉝ 橡皮筋 ========== */
+  .rb-scroll {
+    height: 320px; overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+  .rb-inner { will-change: transform; padding: 14px; }
+  .rb-meter {
+    position: absolute; top: 10px; left: 0; right: 0; text-align: center;
+    font-size: 11px; color: var(--accent-2); opacity: 0; transition: opacity .2s;
+    pointer-events: none;
+  }
+  .rb-meter.show { opacity: 1; }
+
+  /* ========== ㉞ Pinch ========== */
+  .zoom-stage {
+    height: 320px; touch-action: none; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    background: #0b0d12; overflow: hidden;
+  }
+  .zoom-img {
+    width: 86%; height: 76%; border-radius: 14px;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(177,140,245,.9), transparent 55%),
+      radial-gradient(circle at 72% 70%, rgba(110,168,254,.8), transparent 50%),
+      linear-gradient(135deg, #2c3150, #171a26);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 44px; will-change: transform;
+    transform-origin: center;
+  }
+  .zoom-ui { position: absolute; right: 10px; top: 10px; display: flex; gap: 8px; }
+  .zbtn {
+    width: 38px; height: 38px; border-radius: 10px; border: none;
+    background: rgba(255,255,255,.12); color: var(--ink);
+    font-size: 18px; font-weight: 700; cursor: pointer; touch-action: manipulation;
+  }
+  .zbtn:active { transform: scale(.92); }
+  .zoom-read {
+    position: absolute; left: 10px; top: 10px;
+    font-size: 12px; color: var(--accent-2);
+    background: rgba(0,0,0,.4); padding: 4px 8px; border-radius: 8px;
+  }
+
+  /* ========== ㉟ 坍缩头图 ========== */
+  .ch-scroll {
+    height: 420px; overflow-y: auto;
+    overscroll-behavior-y: contain; touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+  .ch-hero { position: relative; height: 180px; overflow: visible; }
+  .ch-heroimg {
+    position: absolute; inset: 0; border-radius: 14px 14px 0 0;
+    transform-origin: 50% 100%;
+    background: linear-gradient(135deg, #4c6ef5, #845ef7);
+    will-change: transform;
+  }
+  .ch-bar {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 8px 14px; border-radius: 14px 14px 0 0;
+    background: rgba(0,0,0,.35);
+    color: #fff; font-size: 14px; font-weight: 700;
+    will-change: transform;
+  }
+  .ch-feed { padding: 14px; }
+  .ch-pin {
+    position: absolute; right: 14px; top: -34px;
+    width: 64px; height: 64px; border-radius: 50%;
+    border: 3px solid var(--panel);
+    background: linear-gradient(135deg, #f59f00, #e8590c);
+    z-index: 5;
+  }
+
+  /* ========== ㊱ 拖拽排序 ========== */
+  .rlist { position: relative; background: #0b0d12; border-radius: 14px; padding: 6px; }
+  .rrow {
+    height: 60px; padding: 0 14px; border-radius: 10px; margin-bottom: 6px;
+    background: var(--panel-2);
+    display: flex; align-items: center; gap: 12px;
+    font-size: 14px; font-weight: 600;
+    touch-action: pan-y; cursor: default;
+    transition: none;
+  }
+  .rrow .grip-ico { color: var(--ink-dim); font-size: 16px; letter-spacing: 2px; }
+  .rrow small { color: var(--ink-dim); font-weight: 400; margin-left: auto; }
+  .rrow.settle { transition: transform .28s var(--ios-ease); }
+  .rrow.lifted {
+    background: #2a2e3f; z-index: 10; position: relative;
+    box-shadow: 0 14px 34px rgba(0,0,0,.55);
+    opacity: .95;
+  }
+  .rrow.slot { transition: transform .24s var(--ios-ease); }
+
+  /* ========== ㊲ 下拉刷新 ========== */
+  .ptr-frame { height: 340px; }
+  .ptr-zone {
+    position: absolute; inset: 0;
+    overflow-y: auto; overscroll-behavior-y: contain;
+    touch-action: pan-y; -webkit-overflow-scrolling: touch;
+  }
+  .ptr-indicator {
+    position: absolute; top: 0; left: 0; right: 0; height: 72px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transform: translateY(-72px); font-size: 13px; color: var(--ink-dim);
+    pointer-events: none;
+  }
+  .ptr-spinner {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2.5px solid rgba(255,255,255,.15); border-top-color: var(--accent);
+  }
+  .ptr-spinner.spinning { animation: spin .8s linear infinite; }
+  .ptr-spinner.done { border-color: var(--ok); border-top-color: var(--ok); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .ptr-content { will-change: transform; padding: 14px; }
+  .ptr-rowline {
+    padding: 13px 14px; border-radius: 12px; margin-bottom: 8px;
+    background: rgba(255,255,255,.05); font-size: 14px;
+    display: flex; justify-content: space-between;
+  }
+  .ptr-rowline span { color: var(--ink-dim); font-size: 12px; }
+  .ptr-rowline.fresh { background: rgba(110,168,254,.14); }
+
+  /* ========== ㊳ 惯性甩动 ========== */
+  .rail-wrap { padding: 8px 6px 16px; }
+  .rail {
+    position: relative; height: 72px; border-radius: 16px;
+    background: #0b0d12; touch-action: none; overflow: hidden;
+  }
+  .rail-ticks {
+    position: absolute; inset: 0;
+    display: flex; justify-content: space-around; align-items: center;
+    padding: 0 30px;
+  }
+  .rail-ticks i { width: 2px; height: 14px; background: rgba(255,255,255,.12); border-radius: 2px; }
+  .rail-ticks i.maj { height: 26px; background: rgba(255,255,255,.22); }
+  .rail-knob {
+    position: absolute; top: 10px; left: 0;
+    width: 52px; height: 52px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; color: #0b1220; font-size: 14px;
+    will-change: transform; box-shadow: 0 8px 24px rgba(0,0,0,.5);
+  }
+  .rail-val { text-align: center; margin-top: 10px; font-size: 13px; color: var(--ink-dim); }
+  .rail-val b { color: var(--accent); font-size: 16px; }
+
+  /* ========== ㊴ 堆叠卡片 ========== */
+  .stack {
+    position: relative; height: 400px; margin-top: 6px;
+    touch-action: pan-y;
+  }
+  .slayer {
+    position: absolute; inset: 0; border-radius: 16px;
+    padding: 22px; will-change: transform;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    color: rgba(255,255,255,.92);
+  }
+  .slayer h3 { font-size: 20px; margin-bottom: 4px; }
+  .slayer p { font-size: 13px; opacity: .75; }
+  .slayer .tag { font-size: 11px; letter-spacing: 2px; opacity: .6; margin-bottom: 8px; text-transform: uppercase; }
+  .slayer.s0 { background: linear-gradient(160deg, #35507a, #1d2540); }
+  .slayer.s1 { background: linear-gradient(160deg, #6b3d5a, #2d1f33); }
+  .slayer.s2 { background: linear-gradient(160deg, #3d6b52, #16301f); }
+  .slayer.s3 { background: linear-gradient(160deg, #6b5a3d, #33291a); }
+
+  /* ========== ㊵ 液态按钮 ========== */
+  .liquid-demo { display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 24px 0 10px; }
+  .liquid {
+    position: relative; overflow: hidden;
+    width: 220px; height: 54px; border: none; border-radius: 27px;
+    background: rgba(177,140,245,.16);
+    font-weight: 700; font-size: 16px; cursor: pointer;
+    touch-action: manipulation;
+    color: var(--accent-2);
+  }
+  .liquid-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .liquid-fill { fill: url(#liqGrad); }
+  .liquid-label {
+    position: relative; z-index: 1;
+    mix-blend-mode: difference; color: #fff;
+    transition: letter-spacing .3s;
+  }
+  .liquid.on .liquid-label { letter-spacing: 3px; }
+  .liquid-track {
+    width: 220px; height: 8px; border-radius: 4px;
+    background: rgba(255,255,255,.08); position: relative; overflow: hidden;
+  }
+  .liquid-track .lfill {
+    position: absolute; inset: 0; border-radius: 4px;
+    background: url(#liqGrad);
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    width: 0%;
+  }
+
+  footer.pagefoot { margin-top: 44px; text-align: center; color: var(--ink-dim); font-size: 12px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rrow.settle, .rrow.slot, .ptr-content, .ptr-indicator, .zoom-img, .ch-heroimg, .slayer { transition: none !important; }
+    .ptr-spinner.spinning { animation-duration: 2s; }
+  }
+</style>
+</head>
+<body>
+
+<header class="pagehead">
+  <h1>高级移动端手感 8 模式</h1>
+  <p>㉝-㊵ · 请用手机或触屏模式试玩</p>
+</header>
+
+<!-- ============ ㉝ 橡皮筋阻尼 ============ -->
+<section class="demo">
+  <div class="demo-head"><span class="pid">㉝</span><h2>橡皮筋阻尼 Rubber-Band</h2></div>
+  <p class="demo-desc">把列表滚到顶，继续向下拉：<b>对数阻尼</b> <code>c*(1-1/(dx/c+1))</code> —— 手拖 300px 内容只移 ~130px，越拉越紧；松手带轻微过冲回弹。</p>
+  <div class="frame">
+    <div class="rb-meter" id="rbMeter">阻尼位移 0px</div>
+    <div class="rb-scroll" id="rbScroll">
+      <div class="rb-inner" id="rbInner"></div>
+    </div>
+  </div>
+  <p class="hint">先滚回顶部 → 再往下拉 · 松手看回弹</p>
+</section>
+
+<!-- ============ ㉞ 捏合缩放 ============ -->
+<section class="demo">
+  <div class="demo-head"><span class="pid">㉞</span><h2>捏合缩放 Pinch-to-Zoom</h2></div>
+  <p class="demo-desc"><b>双指捏合</b>：缩放锚定在双指起点；松手 scale&lt;1 弹回、scale&gt;1.8 吸附放大。<b>双击</b> toggle。没触屏？用 +/− 按钮（这就是无障碍等价物）。</p>
+  <div class="frame">
+    <div class="zoom-stage" id="zoomStage">
+      <div class="zoom-read" id="zoomRead">100%</div>
+      <div class="zoom-ui">
+        <button class="zbtn" id="zoomOut">−</button>
+        <button class="zbtn" id="zoomIn">+</button>
+      </div>
+      <div class="zoom-img" id="zoomImg">🖼️</div>
+    </div>
+  </div>
+  <p class="hint">双指捏合 / 双击 / +− 按钮</p>
+</section>
+
+<!-- ============ ㉟ 坍缩头图 ============ -->
+<section class="demo">
+  <div class="demo-head"><span class="pid">㉟</span><h2>坍缩头图 Collapsing Header</h2></div>
+  <p class="demo-desc">顶上拉：<b>stretch</b>（origin 底边锚定，往上长）；往上滚：头图<b>半速视差</b> + bar 跟随。全程只动 transform + rAF 节流，不劫持滚动。</p>
+  <div class="frame">
+    <div class="ch-scroll" id="chScroll">
+      <div class="ch-hero">
+        <div class="ch-heroimg" id="chImg"></div>
+        <div class="ch-bar" id="chBar">Ada 的空间 · 128 篇</div>
+        <div class="ch-pin"></div>
+      </div>
+      <div class="ch-feed" id="chFeed"></div>
+    </div>
+  </div>
+  <p class="hint">滚到顶再下拉 → stretch · 向上滚 → 视差收缩</p>
+</section>
+
+<!-- ============ ㊱ 拖拽排序 ============ -->
+<section class="demo">
+  <div class="demo-head"><span class="pid">㊱</span><h2>长按拖拽排序 Drag-to-Reorder</h2></div>
+  <p class="demo-desc"><b>长按任意行 300ms</b>浮起（scale + 阴影 + 触感）→ 拖动：其他行 transform 让位；每次换位「咔哒」snap 触感；松手才真实结算 DOM。</p>
+  <div class="rlist" id="rlist"></div>
+  <p class="hint">长按住一行拖到新位置 · 松手落位</p>
+</section>
+
+<!-- ============ ㊲ 完整下拉刷新 ============ -->
+<section class="demo">
+  <div class="demo-head"><span class="pid">㊲</span><h2>完整下拉刷新 Pull-to-Refresh</h2></div>
+  <p class="demo-desc">滚到顶继续下拉：spinner <b>跟手旋转</b>（3°/px）→ 超过 80px 文案切换「松开刷新」→ 松手吸附 loading 位 → <b>打勾 500ms</b> → 自动收起。四态状态机。</p>
+  <div class="frame ptr-frame">
+    <div class="ptr-zone" id="ptrZone">
+      <div class="ptr-indicator" id="ptrIndicator">
+        <div class="ptr-spinner" id="ptrSpinner"></div>
+        <span id="ptrLabel">下拉刷新</span>
+      </div>
+      <div class="ptr-content" id="ptrContent"></div>
+    </div>
+  </div>
+  <p class="hint">滚到顶 → 下拉 → 松手（不足 80px 会弹回）</p>
+</section>
+
+<!-- ============ ㊳ 惯性甩动 ============ -->
+<section class="demo">
+  <div class="demo-head"><span class="pid">㊳</span><h2>惯性甩动 Momentum Fling</h2></div>
+  <p class="demo-desc">拖动滑块<b>快速甩出后松手</b>：末速延续、摩擦 0.94/帧 衰减滑行、边界 0.4 倍反弹。速度只取<b>最后几个 move</b> —— 慢速放手不甩。</p>
+  <div class="rail-wrap">
+    <div class="rail" id="rail">
+      <div class="rail-ticks">
+        <i class="maj"></i><i></i><i></i><i></i><i class="maj"></i><i></i><i></i><i></i><i class="maj"></i><i></i><i></i><i></i><i class="maj"></i>
+      </div>
+      <div class="rail-knob" id="railKnob">◆</div>
+    </div>
+    <div class="rail-val">值 <b id="railVal">50</b> / 100</div>
+  </div>
+  <p class="hint">按住滑块快速一甩 · 再试试慢慢放手</p>
+</section>
+
+<!-- ============ ㊴ 堆叠卡片 ============ -->
+<section class="demo">
+  <div class="demo-head"><span class="pid">㊴</span><h2>堆叠卡片页 Stacked Cards</h2></div>
+  <p class="demo-desc">向右拖最前面的卡：<b>后层按 2× 进度提前跟进</b> —— 整叠像被捻开的纸。拖过 35% 或快速轻扫 → 前层飞出，下一层成为新前层。</p>
+  <div class="stack" id="stack">
+    <div class="slayer s3"><div class="tag">Card 04</div><h3>第四层</h3><p>scale 0.82 · 边缘可见</p></div>
+    <div class="slayer s2"><div class="tag">Card 03</div><h3>第三层</h3><p>scale 0.88 · 跟进中</p></div>
+    <div class="slayer s1"><div class="tag">Card 02</div><h3>第二层</h3><p>跟进系数 2× —— 拖 50% 它已就位</p></div>
+    <div class="slayer s0"><div class="tag">Card 01 · 可拖</div><h3>前层</h3><p>向右拖我试试 →</p></div>
+  </div>
+  <p class="hint">拖动前层向右 · 观察后面几层的跟进</p>
+</section>
+
+<!-- ============ ㊵ 液态填充 ============ -->
+<section class="demo">
+  <div class="demo-head"><span class="pid">㊵</span><h2>液态填充 Liquid Swipe</h2></div>
+  <p class="demo-desc">点击按钮：SVG 贝塞尔「水滴前沿」涌向 100%，<b>前沿永远鼓着、移动越快凸得越多</b>（表面张力感）；文字 mix-blend-mode 随液面自动反白。</p>
+  <div class="liquid-demo">
+    <button class="liquid" id="liquidBtn">
+      <svg class="liquid-svg" viewBox="0 0 220 54" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="liqGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#6ea8fe"/><stop offset="100%" stop-color="#b18cf5"/>
+          </linearGradient>
+        </defs>
+        <path class="liquid-fill" id="liquidFill" d=""/>
+      </svg>
+      <span class="liquid-label" id="liquidLabel">订阅</span>
+    </button>
+    <div class="liquid-track"><div class="lfill" id="liquidTrack"></div></div>
+  </div>
+  <p class="hint">点击订阅 / 再点取消 · 观察前沿鼓形随速度变化</p>
+</section>
+
+<footer class="pagefoot">ui-interaction-skill v2.3 · mobile-ui-pro.html · 模式 ㉝-㊵</footer>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+  <linearGradient id="liqGrad2" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#6ea8fe"/><stop offset="100%" stop-color="#b18cf5"/>
+  </linearGradient>
+</defs></svg>
+
+<script>
+(function () {
+  'use strict';
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const damp = (dx, c) => c * (1 - 1 / (Math.abs(dx) / c + 1));   // ㉝ 阻尼公式
+
+  const HAPTIC = { tap: 8, snap: 4, success: [16, 40, 24], warn: [10, 60, 10, 60, 10] };
+  function haptic(t) { if (navigator.vibrate && !reduced) navigator.vibrate(HAPTIC[t] || 8); }
+
+  /* ============ 公用行内容生成 ============ */
+  const lorem = ['今天的会议纪要', '设计方案 V3 已更新', '周末去蓝湾咖啡？', '《移动端手感》读后感', '账单已出，请查收', '新版本发布通知'];
+  const times = ['10:24', '09:18', '昨天', '周一', '周一', '上周'];
+
+  /* ============ ㉝ 橡皮筋 ============ */
+  const rbScroll = document.getElementById('rbScroll');
+  const rbInner = document.getElementById('rbInner');
+  const rbMeter = document.getElementById('rbMeter');
+  lorem.forEach((t, i) => {
+    const d = document.createElement('div');
+    d.className = 'rowline';
+    d.innerHTML = t + '<span>' + times[i] + '</span>';
+    rbInner.appendChild(d);
+  });
+  // 填高，确保可滚动
+  for (let i = 0; i < 6; i++) {
+    const d = document.createElement('div');
+    d.className = 'rowline';
+    d.innerHTML = '占位内容 ' + (i + 7) + '<span>更早</span>';
+    rbInner.appendChild(d);
+  }
+
+  let rb = null;
+  const RUBBER_C = 150;
+  rbScroll.addEventListener('pointerdown', (e) => {
+    if (rbScroll.scrollTop <= 0) rb = { y0: e.clientY, active: false };
+  });
+  rbScroll.addEventListener('pointermove', (e) => {
+    if (!rb) return;
+    const dy = e.clientY - rb.y0;
+    if (dy <= 0 || rbScroll.scrollTop > 0) { endRb(0); return; }
+    if (!rb.active) { rb.active = true; rbInner.style.transition = 'none'; }
+    const pull = damp(dy, RUBBER_C);
+    rbInner.style.transform = 'translateY(' + pull + 'px)';
+    rbMeter.textContent = '阻尼位移 ' + Math.round(pull) + 'px（手指拖了 ' + Math.round(dy) + 'px）';
+    rbMeter.classList.add('show');
+  });
+  function endRb(pull) {
+    if (!rb) return;
+    const wasActive = rb.active;
+    rb = null;
+    if (!wasActive) return;
+    rbInner.style.transition = reduced ? 'none' : 'transform .5s cubic-bezier(0.175, 0.885, 0.32, 1.2)';
+    rbInner.style.transform = 'translateY(0)';
+    setTimeout(() => rbMeter.classList.remove('show'), 300);
+  }
+  rbScroll.addEventListener('pointerup', () => endRb());
+  rbScroll.addEventListener('pointercancel', () => endRb());
+
+  /* ============ ㉞ Pinch 缩放 ============ */
+  const zStage = document.getElementById('zoomStage');
+  const zImg = document.getElementById('zoomImg');
+  const zRead = document.getElementById('zoomRead');
+  const zPtrs = new Map();
+  let zPinch = null, zScale = 1, lastTapT = 0;
+
+  function zRender() {
+    zImg.style.transform = 'scale(' + zScale + ')';
+    zRead.textContent = Math.round(zScale * 100) + '%';
+  }
+  function zSet(target, animated) {
+    zScale = clamp(target, 1, 2.4);
+    zImg.style.transition = animated && !reduced ? 'transform .3s cubic-bezier(0.32,0.72,0,1)' : 'none';
+    zRender(); haptic('snap');
+  }
+  document.getElementById('zoomIn').addEventListener('click', () => zSet(zScale + 0.3, true));
+  document.getElementById('zoomOut').addEventListener('click', () => zSet(zScale - 0.3, true));
+
+  zStage.addEventListener('pointerdown', (e) => {
+    zPtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const now = performance.now();
+    if (zPtrs.size === 1) {
+      if (now - lastTapT < 250) { zSet(zScale > 1.1 ? 1 : 2, true); }   // 双击
+      lastTapT = now;
+    }
+    if (zPtrs.size === 2) {
+      const [a, b] = zPtrs.values();
+      const rect = zImg.getBoundingClientRect();
+      const cx = (a.x + b.x) / 2 - rect.left, cy = (a.y + b.y) / 2 - rect.top;
+      zPinch = {
+        d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, s0: zScale,
+        ox: cx / rect.width * 100, oy: cy / rect.height * 100
+      };
+      zImg.style.transition = 'none';
+      zImg.style.transformOrigin = zPinch.ox.toFixed(1) + '% ' + zPinch.oy.toFixed(1) + '%';
+      try { zStage.setPointerCapture(e.pointerId); } catch (_) {}
+    }
+  });
+  zStage.addEventListener('pointermove', (e) => {
+    if (!zPtrs.has(e.pointerId)) return;
+    zPtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (zPtrs.size !== 2 || !zPinch) return;
+    const [a, b] = zPtrs.values();
+    zScale = clamp(zPinch.s0 * (Math.hypot(a.x - b.x, a.y - b.y) / zPinch.d0), 0.4, 3);
+    zRender();
+  });
+  function zEnd(e) {
+    zPtrs.delete(e.pointerId);
+    if (zPtrs.size < 2 && zPinch) {
+      zPinch = null;
+      if (zScale < 1) zSet(1, true);              // 缩没 → 弹回
+      else if (zScale > 1.8) zSet(2.4, true);     // 过阈值 → 吸附放大
+      else { zImg.style.transition = reduced ? 'none' : 'transform .3s cubic-bezier(0.32,0.72,0,1)'; zRender(); }
+    }
+  }
+  zStage.addEventListener('pointerup', zEnd);
+  zStage.addEventListener('pointercancel', zEnd);
+
+  /* ============ ㉟ 坍缩头图 ============ */
+  const chScroll = document.getElementById('chScroll');
+  const chImg = document.getElementById('chImg');
+  const chBar = document.getElementById('chBar');
+  const chFeed = document.getElementById('chFeed');
+  for (let i = 0; i < 10; i++) {
+    const d = document.createElement('div');
+    d.className = 'rowline';
+    d.innerHTML = (lorem[i % lorem.length]) + '<span>' + (times[i % times.length]) + '</span>';
+    chFeed.appendChild(d);
+  }
+  let chTick = false;
+  chScroll.addEventListener('scroll', () => {
+    if (chTick) return;
+    chTick = true;
+    requestAnimationFrame(() => {
+      const y = chScroll.scrollTop;
+      if (y > 0) {
+        // shrink：半速视差（头图滚得比内容慢 = 深度感）
+        chImg.style.transformOrigin = '50% 100%';
+        chImg.style.transform = 'translateY(' + y * 0.5 + 'px) scale(' + clamp(1 + y / 600, 1, 1.06) + ')';
+        chBar.style.transform = 'translateY(' + y * 0.5 + 'px)';
+      }
+      chTick = false;
+    });
+  }, { passive: true });
+  // stretch：到顶继续下拉（同 ㉝ 阻尼）
+  let chPull = null;
+  chScroll.addEventListener('pointerdown', (e) => {
+    if (chScroll.scrollTop <= 0) chPull = { y0: e.clientY, active: false };
+  });
+  chScroll.addEventListener('pointermove', (e) => {
+    if (!chPull) return;
+    const dy = e.clientY - chPull.y0;
+    if (dy <= 0 || chScroll.scrollTop > 0) { endChPull(); return; }
+    if (!chPull.active) { chPull.active = true; chImg.style.transition = 'none'; }
+    const s = 1 + clamp(damp(dy, 200) / 200 * 0.35, 0, 0.35);
+    chImg.style.transformOrigin = '50% 100%';
+    chImg.style.transform = 'scale(' + s + ')';
+    chBar.style.transform = 'translateY(' + damp(dy, 200) * 0.5 + 'px)';
+  });
+  function endChPull() {
+    if (!chPull) return;
+    const was = chPull.active; chPull = null;
+    if (!was) return;
+    chImg.style.transition = reduced ? 'none' : 'transform .5s cubic-bezier(0.175,0.885,0.32,1.2)';
+    chImg.style.transform = 'scale(1)';
+    chBar.style.transform = 'translateY(0)';
+  }
+  chScroll.addEventListener('pointerup', endChPull);
+  chScroll.addEventListener('pointercancel', endChPull);
+
+  /* ============ ㊱ 拖拽排序 ============ */
+  const rlist = document.getElementById('rlist');
+  const rNames = ['置顶：项目 Alpha', '项目 Beta', '项目 Gamma', '项目 Delta', '项目 Epsilon'];
+  rNames.forEach((n, i) => {
+    const d = document.createElement('div');
+    d.className = 'rrow';
+    d.innerHTML = '<span class="grip-ico">⠿</span>' + n + '<small>长按拖我</small>';
+    d._idx = i;
+    rlist.appendChild(d);
+  });
+  const ROW_H = 66;   // 60 + 6 margin
+  let rd = null;
+
+  rlist.addEventListener('pointerdown', (e) => {
+    const row = e.target.closest('.rrow');
+    if (!row) return;
+    rd = { row, y0: e.clientY, moved: false, timer: null, cur: row._idx };
+    rd.timer = setTimeout(() => liftRow(e.pointerId), 300);
+  });
+  function liftRow(pid) {
+    if (!rd) return;
+    rd.moved = true;
+    rd.row.classList.add('lifted');
+    rd.baseTop = rd.row.getBoundingClientRect().top;
+    try { rd.row.setPointerCapture(pid); } catch (_) {}
+    haptic('warn');
+    rlist.querySelectorAll('.rrow').forEach(r => { if (r !== rd.row) r.classList.add('slot'); });
+  }
+  rlist.addEventListener('pointermove', (e) => {
+    if (!rd) return;
+    if (!rd.moved) {
+      if (Math.abs(e.clientY - rd.y0) > 10) { clearTimeout(rd.timer); rd = null; }
+      return;
+    }
+    e.preventDefault();
+    const dy = e.clientY - rd.y0;
+    rd.row.style.transform = 'translateY(' + dy + 'px) scale(1.04)';
+    // 拖动行的中心落在哪个槽 → 让其余行补位
+    const centerY = rd.baseTop + dy + 30;
+    const listTop = rlist.getBoundingClientRect().top + 6;
+    const slot = clamp(Math.round((centerY - listTop) / ROW_H), 0, rNames.length - 1);
+    if (slot !== rd.cur) { rd.cur = slot; haptic('snap'); }     // 咔哒换位
+    const oldIdx = rd.row._idx;
+    rlist.querySelectorAll('.rrow').forEach((r) => {
+      if (r === rd.row) return;
+      let off = 0;
+      if (r._idx > oldIdx && r._idx <= slot) off = -ROW_H;
+      else if (r._idx < oldIdx && r._idx >= slot) off = ROW_H;
+      r.style.transform = off ? 'translateY(' + off + 'px)' : '';
+    });
+  });
+  function settleReorder(e) {
+    if (!rd) return;
+    clearTimeout(rd.timer);
+    const { row, moved, cur } = rd;
+    rd = null;
+    if (!moved) return;
+    const rows = Array.from(rlist.querySelectorAll('.rrow'));
+    const oldIdx = rows.indexOf(row);
+    const newIdx = clamp(cur, 0, rows.length - 1);
+
+    if (newIdx === oldIdx) {                        // 没换位：全体弹回
+      rows.forEach(r => { r.classList.add('slot'); r.style.transform = ''; });
+      row.style.transition = reduced ? 'none' : 'transform .26s var(--ios-ease)';
+      row.style.transform = 'translateY(0) scale(1)';
+      setTimeout(() => {
+        rlist.querySelectorAll('.rrow').forEach(r => {
+          r.classList.remove('slot', 'lifted');
+          r.style.transition = ''; r.style.transform = '';
+        });
+      }, reduced ? 0 : 260);
+      return;
+    }
+    // FLIP 结算：First = 当前视觉位置 → DOM 重排（Last）→ Invert → Play
+    const first = new Map();
+    rows.forEach(r => first.set(r, r.getBoundingClientRect().top));
+    rows.splice(oldIdx, 1);
+    rows.splice(newIdx, 0, row);
+    rows.forEach((r, i) => { r._idx = i; rlist.appendChild(r); });
+    rows.forEach(r => {
+      const delta = first.get(r) - r.getBoundingClientRect().top;
+      r.classList.remove('slot', 'lifted');
+      r.style.transition = 'none';
+      r.style.transform = delta ? 'translateY(' + delta + 'px)' : '';
+    });
+    requestAnimationFrame(() => {
+      rows.forEach(r => {
+        r.style.transition = reduced ? 'none' : 'transform .26s var(--ios-ease)';
+        r.style.transform = '';
+      });
+      setTimeout(() => {
+        rows.forEach(r => { r.style.transition = ''; r.style.transform = ''; });
+        haptic('success');
+      }, reduced ? 0 : 260);
+    });
+  }
+  rlist.addEventListener('pointerup', settleReorder);
+  rlist.addEventListener('pointercancel', settleReorder);
+
+  /* ============ ㊲ 下拉刷新 ============ */
+  const ptrZone = document.getElementById('ptrZone');
+  const ptrContent = document.getElementById('ptrContent');
+  const ptrIndicator = document.getElementById('ptrIndicator');
+  const ptrSpinner = document.getElementById('ptrSpinner');
+  const ptrLabel = document.getElementById('ptrLabel');
+  const PTR_TRIGGER = 80, PTR_HOLD = 62;
+
+  function ptrRows(freshCount) {
+    ptrContent.innerHTML = '';
+    lorem.forEach((t, i) => {
+      const d = document.createElement('div');
+      d.className = 'ptr-rowline' + (i < freshCount ? ' fresh' : '');
+      d.innerHTML = t + '<span>' + times[i] + '</span>';
+      ptrContent.appendChild(d);
+    });
+    for (let i = 0; i < 4; i++) {
+      const d = document.createElement('div');
+      d.className = 'ptr-rowline';
+      d.innerHTML = '更早的内容 ' + (i + 1) + '<span>上周</span>';
+      ptrContent.appendChild(d);
+    }
+  }
+  ptrRows(0);
+
+  let ptr = null, ptrState = 'idle';
+  const ptrDamp = (d) => damp(d, 130);
+
+  ptrZone.addEventListener('pointerdown', (e) => {
+    if (ptrZone.scrollTop <= 0 && ptrState === 'idle') ptr = { y0: e.clientY, pull: 0 };
+  });
+  ptrZone.addEventListener('pointermove', (e) => {
+    if (!ptr) return;
+    const dy = e.clientY - ptr.y0;
+    if (dy <= 0 || ptrZone.scrollTop > 0) { ptr = null; ptrSnapBack(); return; }
+    ptrState = 'pulling';
+    const pull = ptrDamp(dy);
+    ptr.pull = pull;
+    ptrContent.style.transition = 'none';
+    ptrContent.style.transform = 'translateY(' + pull + 'px)';
+    ptrIndicator.style.transition = 'none';
+    ptrIndicator.style.transform = 'translateY(' + (-72 + clamp(pull, 0, 90)) + 'px)';
+    ptrSpinner.style.transform = 'rotate(' + pull * 3 + 'deg)';
+    ptrLabel.textContent = pull > PTR_TRIGGER ? '松开刷新' : '下拉刷新';
+  });
+  ptrZone.addEventListener('pointerup', () => {
+    if (!ptr) return;
+    const over = ptr.pull > PTR_TRIGGER; ptr = null;
+    if (over) ptrLoading(); else ptrSnapBack();
+  });
+  ptrZone.addEventListener('pointercancel', () => { ptr = null; ptrSnapBack(); });
+
+  function ptrSnapBack() {
+    ptrContent.style.transition = reduced ? 'none' : 'transform .45s cubic-bezier(0.32,0.72,0,1)';
+    ptrContent.style.transform = 'translateY(0)';
+    ptrIndicator.style.transition = reduced ? 'none' : 'transform .45s cubic-bezier(0.32,0.72,0,1)';
+    ptrIndicator.style.transform = 'translateY(-72px)';
+    setTimeout(() => { if (ptrState !== 'loading') { ptrState = 'idle'; ptrSpinner.classList.remove('done'); } }, 460);
+  }
+  function ptrLoading() {
+    ptrState = 'loading';
+    haptic('tap');
+    ptrContent.style.transition = reduced ? 'none' : 'transform .35s cubic-bezier(0.32,0.72,0,1)';
+    ptrContent.style.transform = 'translateY(' + PTR_HOLD + 'px)';
+    ptrIndicator.style.transition = reduced ? 'none' : 'transform .35s cubic-bezier(0.32,0.72,0,1)';
+    ptrIndicator.style.transform = 'translateY(-10px)';
+    ptrSpinner.style.transform = '';
+    ptrSpinner.classList.add('spinning');
+    ptrLabel.textContent = '刷新中…';
+    setTimeout(() => {                                  // 模拟请求完成
+      ptrState = 'done';
+      ptrSpinner.classList.remove('spinning');
+      ptrSpinner.classList.add('done');
+      ptrLabel.textContent = '已更新';
+      ptrRows(2);
+      haptic('success');
+      setTimeout(ptrSnapBack, 500);                     // 打勾停留 500ms
+    }, 900);
+  }
+
+  /* ============ ㊳ 惯性甩动 ============ */
+  const rail = document.getElementById('rail');
+  const knob = document.getElementById('railKnob');
+  const railVal = document.getElementById('railVal');
+  let rx = 0, rMax = 0, flingRAF = null;
+
+  function railMeasure() { rMax = rail.clientWidth - 52; railRender(); }
+  function railRender() {
+    rx = clamp(rx, 0, rMax);
+    knob.style.transform = 'translateX(' + rx + 'px)';
+    railVal.textContent = rMax ? Math.round(rx / rMax * 100) : 0;
+  }
+  window.addEventListener('resize', railMeasure);
+  railMeasure();
+
+  let rd2 = null;
+  rail.addEventListener('pointerdown', (e) => {
+    cancelAnimationFrame(flingRAF);
+    rd2 = { x0: e.clientX, sx: rx, lastX: e.clientX, lastT: performance.now(), v: 0 };
+    rail.setPointerCapture(e.pointerId);
+  });
+  rail.addEventListener('pointermove', (e) => {
+    if (!rd2) return;
+    const now = performance.now();
+    rd2.v = (e.clientX - rd2.lastX) / Math.max(now - rd2.lastT, 1);   // 末速 px/ms
+    rd2.lastX = e.clientX; rd2.lastT = now;
+    rx = clamp(rd2.sx + e.clientX - rd2.x0, 0, rMax);
+    railRender();
+  });
+  rail.addEventListener('pointerup', () => {
+    if (!rd2) return;
+    const v = rd2.v; rd2 = null;
+    if (Math.abs(v) < 0.15) return;                    // 慢速放手不甩
+    let vel = v * 16;
+    (function glide() {
+      rx += vel;
+      if (rx < 0) { rx = 0; vel = -vel * 0.4; haptic('tap'); }
+      else if (rx > rMax) { rx = rMax; vel = -vel * 0.4; haptic('tap'); }
+      else vel *= 0.94;
+      railRender();
+      if (Math.abs(vel) > 0.2) flingRAF = requestAnimationFrame(glide);
+    })();
+  });
+  rail.addEventListener('pointercancel', () => { rd2 = null; cancelAnimationFrame(flingRAF); });
+
+  /* ============ ㊴ 堆叠卡片 ============ */
+  const stack = document.getElementById('stack');
+  let layers = Array.from(stack.querySelectorAll('.slayer'));   // DOM 倒序：最后一个是前层
+  const SLOT_TX = -14, SLOT_TY = -9, SLOT_S = 0.06, FOLLOW = 2;
+
+  function slotOf(i) {
+    return { tx: i * SLOT_TX, ty: i * SLOT_TY, s: 1 - i * SLOT_S, z: 100 - i };
+  }
+  function applySlots(animated) {
+    layers.forEach((el, i) => {
+      if (animated && !reduced) el.style.transition = 'transform .38s cubic-bezier(0.32,0.72,0,1), opacity .38s';
+      else el.style.transition = 'none';
+      const s = slotOf(i);
+      el.style.zIndex = s.z;
+      el.style.opacity = 1;
+      el.style.transform = 'translate(' + s.tx + 'px,' + s.ty + 'px) scale(' + s.s + ')';
+    });
+  }
+  applySlots(false);
+
+  let stk = null;
+  stack.addEventListener('pointerdown', (e) => {
+    stk = { x0: e.clientX, t0: performance.now(), lastX: e.clientX, lastT: performance.now(), v: 0 };
+    layers.forEach(el => el.style.transition = 'none');
+  });
+  stack.addEventListener('pointermove', (e) => {
+    if (!stk) return;
+    const now = performance.now();
+    stk.v = (e.clientX - stk.lastX) / Math.max(now - stk.lastT, 1);
+    stk.lastX = e.clientX; stk.lastT = now;
+    const w = stack.clientWidth;
+    const p = clamp((e.clientX - stk.x0) / w, 0, 1);
+    layers.forEach((el, i) => {
+      if (i === 0) {
+        el.style.transform = 'translate(' + p * 110 + '%, 0) scale(1)';
+        el.style.opacity = String(1 - p * 0.4);
+      } else {
+        const t = Math.min(1, p * FOLLOW);              // 2× 进度跟进
+        const from = slotOf(i), to = slotOf(i - 1);
+        const tx = from.tx + (to.tx - from.tx) * t, ty = from.ty + (to.ty - from.ty) * t;
+        const s = from.s + (to.s - from.s) * t;
+        el.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + s + ')';
+      }
+    });
+  });
+  function endStack(e, cancelled) {
+    if (!stk) return;
+    const dx = cancelled ? 0 : e.clientX - stk.x0;
+    const vx = cancelled ? 0 : stk.v;
+    const w = stack.clientWidth;
+    const commit = !cancelled && layers.length > 1 && (dx > w * 0.35 || vx > 0.5);
+    stk = null;
+    if (commit) {
+      const front = layers[0];
+      front.style.transition = 'transform .38s cubic-bezier(0.32,0.72,0,1), opacity .38s';
+      front.style.transform = 'translate(112%, 0)';
+      front.style.opacity = '0';
+      haptic('success');
+      setTimeout(() => {
+        layers.push(layers.shift());
+        stack.appendChild(layers[layers.length - 1]);   // 保持 DOM 顺序同步（可选）
+        applySlots(true);
+        haptic('snap');
+      }, reduced ? 0 : 380);
+    } else {
+      applySlots(true);
+      if (dx > 8) haptic('snap');
+    }
+  }
+  stack.addEventListener('pointerup', endStack);
+  stack.addEventListener('pointercancel', (e) => endStack(e, true));
+
+  /* ============ ㊵ 液态填充 ============ */
+  const liquidBtn = document.getElementById('liquidBtn');
+  const liquidFill = document.getElementById('liquidFill');
+  const liquidLabel = document.getElementById('liquidLabel');
+  const liquidTrack = document.getElementById('liquidTrack');
+  let lp = 0, lt = 0;
+
+  function liquidPath(p, bulge) {
+    const x = p * 220;
+    return 'M0,54 L' + x.toFixed(1) + ',54' +
+      ' C' + (x + bulge * 0.6).toFixed(1) + ',40 ' + (x + bulge).toFixed(1) + ',22 ' + (x + bulge * 0.4).toFixed(1) + ',0' +
+      ' L220,0 L220,54 Z';
+  }
+  function liquidTick() {
+    cancelAnimationFrame(liquidFill._raf);
+    (function step() {
+      const d = lt - lp;
+      if (Math.abs(d) < 0.002) lp = lt;
+      else { lp += d * 0.12; liquidFill._raf = requestAnimationFrame(step); }
+      const bulge = 12 + Math.abs(d) * 70;             // 移动越快前沿越凸
+      liquidFill.setAttribute('d', liquidPath(clamp(lp, -0.15, 1.15), bulge));
+      liquidTrack.style.width = clamp(lp, 0, 1) * 100 + '%';
+    })();
+  }
+  liquidBtn.addEventListener('click', () => {
+    lt = lt > 0.5 ? 0 : 1;
+    liquidBtn.classList.toggle('on', lt > 0.5);
+    liquidLabel.textContent = lt > 0.5 ? '已订阅' : '订阅';
+    haptic(lt > 0.5 ? 'success' : 'tap');
+    liquidTick();
+  });
+  liquidFill.setAttribute('d', liquidPath(0, 12));
+})();
+</script>
+</body>
+</html>

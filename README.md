@@ -8,14 +8,16 @@
 | **uiux-director** | 总控路由 | 缺口路由表 · 三纪律(按缺口/小任务直做/轻量交接) |
 | **ui-layout-skill** | 骨架 | 刻意低约束:5 条底线 + 决策问题 + 可替换起点配方 |
 | **ui-visual-skill** | 质感 | 4 套气质色板 + 5 套字体配对 + 廉价感反模式 |
-| **ui-interaction-skill** | 动效 | 24 种模式 + 输出/评审/验收协议 + 移动端铁律 |
+| **ui-interaction-skill** | 动效 | 48 种模式(25 核心 + 15 移动端手感 + 8 组件情绪) + 模块映射表 + 移动端铁律 |
 | **ui-component-skill** | 组件 | 8 态状态矩阵 + 表单 UX 铁律 + 页面四态流 |
 | **ui-verify-skill** | 验收 | 视口矩阵实测 + 可复制检测脚本 + 已知陷阱 + 四态结论 |
 
 ## 🌐 在线演示(GitHub Pages)
 
 - **[▶ 基础 10 式 · 10-ui-interactions](https://herosann123.github.io/uiux-skills/10-ui-interactions.html)** — 视差/卡片堆叠/磁吸/弹性/翻牌等,全部可玩
-- [进阶 7 式 · advanced-ui-v2](https://herosann123.github.io/uiux-skills/advanced-ui-v2.html) · [前沿 7 式 · advanced-ui-v3](https://herosann123.github.io/uiux-skills/advanced-ui-v3.html)
+- [进阶 7 式 · advanced-ui-v2](https://herosann123.github.io/uiux-skills/advanced-ui-v2.html) · [前沿 8 式 · advanced-ui-v3](https://herosann123.github.io/uiux-skills/advanced-ui-v3.html)
+- 移动端三部曲(手机打开试玩):[手感 7 式 · mobile-ui](https://herosann123.github.io/uiux-skills/mobile-ui.html) · [高级手感 8 式 · mobile-ui-pro](https://herosann123.github.io/uiux-skills/mobile-ui-pro.html) · [组件与情绪 8 式 · mobile-ui-plus](https://herosann123.github.io/uiux-skills/mobile-ui-plus.html)
+- 综合实战:[结账流](https://herosann123.github.io/uiux-skills/demo-checkout.html) · [通讯录](https://herosann123.github.io/uiux-skills/demo-messenger.html) · [信息流](https://herosann123.github.io/uiux-skills/demo-social-feed.html)
 - [演示导航首页](https://herosann123.github.io/uiux-skills/)
 
 ---
@@ -42,7 +44,7 @@
 
 ### 不装 agent,只想看效果
 - `ui-visual-skill/demo.html` — 同页「廉价感 ↔ 高级感」一键切换
-- `ui-interaction-skill/demos/*.html` — 24 种交互模式可玩演示
+- `ui-interaction-skill/demos/*.html` — 48 种交互模式可玩演示(桌面 3 页 + 移动端 3 页 + 综合 3 页)
 - `ui-interaction-skill/examples/` — 综合成品(邀请函 / 家庭参观页,单文件可直接发朋友)
 
 ---
@@ -71,4 +73,4 @@ $uiux-director 帮我验收这个页面                → 路由到 ui-verify-s
 ## 版本
 
 uiux-director 1.0.0 · ui-layout-skill 1.0.0 · ui-visual-skill 1.0.0 ·
-ui-interaction-skill 2.1.0 · ui-component-skill 1.0.0 · ui-verify-skill 1.0.0 · MIT
+ui-interaction-skill 2.4.0 · ui-component-skill 1.0.0 · ui-verify-skill 1.0.0 · MIT
