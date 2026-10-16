@@ -4641,6 +4641,437 @@ function celebrateAt(el) {
 
 ---
 
+# 第 7 档 · 前沿 CSS 原生动效（49–56）
+
+> 2023–2025 年浏览器陆续落地的 CSS 原生动画能力，趋势是**把过去必须 JS 手写的动效交还 CSS**：滚动驱动、`display:none` 过渡、纯 CSS 弹簧曲线、`height:auto` 过渡、锚点定位、跨文档转场。Unicode 圈号止于 ㊿，本档起用阿拉伯数字编号。
+> **使用总则：渐进增强**——增强声明包 `@supports`，基线体验不依赖这些特性；所有模式写法自带零成本降级。浏览器支持度数据以本手册编写时点为准（2026-10），发布前用 caniuse 复核。
+
+## 49 滚动驱动动画 Scroll-Driven Animations
+
+### 原理
+`animation-timeline` 把动画进度绑定到**滚动位置**而不是时间：`view()` = 元素在视口中的可见进度，`scroll()` = 滚动容器进度。滚动即播放、松手即停，合成器驱动不占主线程，比 IntersectionObserver + rAF 更顺滑且零 JS。② 滚动触发、① 视差、㉒ 滚动驱动数字的现代纯 CSS 实现。
+
+### 适用模块
+- 滚动 reveal（替代 ② 的 IO 版本）
+- 顶部阅读进度条
+- 视差背景层
+- 滚动驱动的数字 / 进度环
+
+### 不适用
+- ❌ 需要触发后自行播完的入场动画（时间驱动更合适）
+- ❌ 拖拽类跟手交互（仍用 JS）
+
+### 核心代码
+
+```css
+/* 1) 滚动 reveal：元素进入视口 0%→60% 区间完成入场 */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(48px); }
+  to   { opacity: 1; transform: none; }
+}
+@supports (animation-timeline: view()) {
+  .rise {
+    animation: rise-in linear both;        /* both 必须：区间外保持端点态 */
+    animation-timeline: view();
+    animation-range: entry 0% entry 60%;
+  }
+}
+
+/* 2) 顶部阅读进度条（页面级） */
+@keyframes grow-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@supports (animation-timeline: scroll()) {
+  .progress {
+    position: fixed; inset: 0 0 auto 0; height: 3px; transform-origin: 0 50%;
+    animation: grow-x linear both;
+    animation-timeline: scroll(root block);
+  }
+}
+
+/* 3) 视差：同一滚动反向驱动背景层 */
+@keyframes drift-up { from { transform: translateY(8vh); } to { transform: translateY(-8vh); } }
+.parallax-bg {
+  animation: drift-up linear both;
+  animation-timeline: view();
+  animation-range: cover;
+}
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| animation-range | entry 0% entry 60% | 入场在进入视口六成处完成；太晚用户已划过 |
+| fill-mode | both | 缺了区间外会闪回无动画态 |
+| timeline | view() / scroll(root block) | 页面级用 root；容器内用 nearest |
+| 视差幅度 | ±8~12vh | 超过会露出背景边缘 |
+| easing | linear | scrub 场景 ease 会作用在进度映射上，通常不要 |
+
+### 避坑
+- ❌ **把初始态写在元素上**（如 `.rise { opacity: 0 }`）→ 不支持的浏览器元素**永久隐身**；初始态只写进 `@keyframes` 的 from，且整个 animation 声明包 `@supports`
+- ❌ **动画里改 layout 属性**（top / width）→ 丢掉合成器加速；只用 transform / opacity
+- ❌ **reduced-motion 不处理** → 整段包 `@media (prefers-reduced-motion: no-preference)`
+- ❌ **给 scrub 动画配 spring 曲线** → 滚动反向时会看到曲线回放，观感错乱
+
+### 支持与降级
+Chrome/Edge 115+；Safari 与 Firefox 以 caniuse 实查为准。写法本身零成本降级：不支持时元素静态可见（无入场动画但内容完整）。
+
+## 50 @starting-style 原生进出场
+
+### 原理
+CSS 过渡的死角：元素从 `display:none` 显示或刚插入 DOM 时没有「上一帧」，transition 不触发。`@starting-style` 声明「第一帧」样式，配合 `transition-behavior: allow-discrete` 让 `display` / `overlay` 这类离散属性也参与过渡 —— 弹层 / dialog / toast 的进出场完全不需要 JS 切 class。
+
+### 适用模块
+- dialog / popover 打开与关闭（离场也平滑，这是 JS 方案最难写的部分）
+- toast 插入动画
+- tooltip 淡入
+
+### 不适用
+- ❌ 需要跟手拖拽的浮层（仍 JS）
+- ❌ 高频复用同节点反复重触发（重新触发语义依赖重新渲染）
+
+### 核心代码
+
+```css
+.sheet {
+  /* 关闭态 = 离场过渡的目标态 */
+  opacity: 0; transform: translateY(24px) scale(.97);
+  transition: opacity .32s cubic-bezier(.32,.72,0,1),
+              transform .32s cubic-bezier(.32,.72,0,1),
+              display .32s allow-discrete,     /* display 跳变期间保持渲染 */
+              overlay .32s allow-discrete;     /* top layer 提升也过桥 */
+}
+.sheet:popover-open, dialog.sheet:open {
+  opacity: 1; transform: none;
+}
+@starting-style {
+  /* 第一帧：进场从这里过渡到打开态 */
+  .sheet:popover-open, dialog.sheet:open { opacity: 0; transform: translateY(24px) scale(.97); }
+}
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| duration | 280~360ms | 弹层标准时长 |
+| 曲线 | cubic-bezier(.32,.72,0,1) | iOS sheet 手感 |
+| 位移 | 16~28px translateY | 太大像「掉下来」 |
+
+### 避坑
+- ❌ **只写 @starting-style 不写 allow-discrete** → 进场有过渡、**离场瞬间消失**（display 直接跳变），最常见的翻车点
+- ❌ **transition 只列 opacity/transform** → display 跳变会让整段过渡作废；**四条都要列**
+- ❌ **关闭态基样式漏写** → 浏览器不知道往哪过渡；关闭态值 = @starting-style 值
+- ❌ **和 Web Animations 抢同一属性** → 后到者赢，排查半小时的那种 bug
+
+### 支持与降级
+Chrome 117+ / Safari 17.5+ / Firefox 129+。老浏览器进场退化为瞬时出现（功能完整）；追求一致体验用 @supports 分支保留旧 JS class 方案。
+
+## 51 Popover API 零 JS 弹层
+
+### 原理
+`popover` 属性把元素提升到 **top layer**（永远在最上层、自带 backdrop、Esc / 外点自动关闭、焦点管理），一个 `popovertarget` 按钮即可开关 —— 过去手写 modal 的 30 行 JS（遮罩、Esc、外点、z-index、焦点回收）全部免费。
+
+### 适用模块
+- 下拉菜单 / 操作菜单
+- tooltip 型说明卡
+- 非阻塞通知（`popover="manual"`）
+- **现代弹层三件套**：51 popover（载体）+ 50 @starting-style（进出场）+ 54 锚点（定位）
+
+### 不适用
+- ❌ 需要阻塞交互的确认框（用 `<dialog>` + `showModal()`，popover 不阻塞）
+- ❌ 需要复杂拖拽的浮层
+
+### 核心代码
+
+```html
+<button popovertarget="menu">打开菜单</button>
+<div id="menu" popover class="sheet">
+  <button>复制链接</button><button>置顶</button><button>删除</button>
+</div>
+```
+
+```css
+.menu { border: none; border-radius: 14px; padding: 6px; box-shadow: 0 12px 40px rgb(0 0 0 / .25); }
+.menu::backdrop { background: rgb(0 0 0 / .1); }
+```
+
+```javascript
+// 需要感知开关时机（埋点 / 联动动画）：
+menu.addEventListener('toggle', e => e.newState === 'open' && onOpen());
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| popover 值 | auto（默认） | auto = 外点/Esc 关且同级互斥；manual = 常驻（toast 用） |
+| backdrop | transparent ~ rgb(0 0 0/.15) | 菜单类透明，模态感用 dialog |
+
+### 避坑
+- ❌ **auto popover 里再开 auto popover** → 父层被自动关掉；嵌套用 manual 或改 dialog
+- ❌ **自己写 display 控制显隐** → popover 属性自带显隐逻辑，再写会打架；显隐动画只交给 50
+- ❌ **往 ::backdrop 上放交互** → backdrop 点击 = light dismiss，点了就关
+
+### 支持与降级
+Chrome 114+ / Safari 17+ / Firefox 125+，已是 Baseline。老浏览器 feature-detect 后回退 dialog/class 方案。
+
+## 52 linear() 弹簧缓动
+
+### 原理
+`linear()` 缓动函数接受任意个「进度 位置%」采样点，可以把整条弹簧位移曲线（含 1~2 次过冲震荡）编码进一条 CSS 声明 —— ⑦ 的 JS 物理弹簧在**非跟手场景**（hover、展开、指示器落位）下的纯 CSS 替代。
+
+### 适用模块
+- Tab 指示器 / segmented control 落位
+- hover 卡片抬起回弹
+- toggle 拨杆
+
+### 不适用
+- ❌ 拖拽松手回弹（需要真实末速，仍用 ⑦ rAF）
+- ❌ duration > 800ms 的动画（弹簧尾巴被拉长变粘滞）
+
+### 核心代码
+
+```css
+/* 采样点由生成器导出（stiffness≈100 / damping≈12）：
+   https://linear-easing-generator.netlify.app  */
+:root {
+  --spring: linear(
+    0, 0.0036 1.1%, 0.0185 2.2%, 0.049 3.4%, 0.096 4.7%, 0.171 6.1%,
+    0.269 7.5%, 0.386 8.9%, 0.583 10.9%, 0.857 13.8%, 1.004 15.7%,
+    1.125 17.5%, 1.197 19.3%, 1.226 20.9%, 1.220 22.3%, 1.187 23.5%,
+    1.134 24.6%, 1.006 26.4%, 0.923 27.3%, 0.855 28.1%, 0.796 28.9%,
+    0.685 30.2%, 0.609 31.4%, 0.553 32.6%, 0.517 33.7%, 0.497 34.9%,
+    0.494 36.1%, 0.504 37.3%, 0.524 38.6%, 0.713 45.2%, 0.767 48.3%,
+    0.806 51.3%, 0.829 54.4%, 0.839 57.4%, 0.836 60.5%, 0.832 66.2%,
+    0.850 72.0%, 0.876 77.8%, 0.902 83.8%, 0.924 90.0%, 0.940 96.3%, 0.956 100%
+  );
+}
+.tab-indicator { transition: transform .55s var(--spring); }
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| 过冲峰值 | 1.15~1.25 | 超过 1.3 像果冻，低于 1.1 感知不到 |
+| 震荡次数 | 1~2 次 | 弹簧高级感在「一次过冲一次回落」 |
+| duration | 450~650ms | 曲线自带节奏，时长要给足 |
+| 生成器 | linear-easing-generator | 调 stiffness/damping 导出，别手拍点 |
+
+### 避坑
+- ❌ **手写采样点** → 容易出折角；用生成器从弹簧参数导出
+- ❌ **跟手场景用它** → 松手回弹需要衔接真实末速，只有 ⑦ 的 rAF 物理做得到
+- ❌ **var() 失效无兜底** → 不支持的浏览器整条声明作废回落默认 ease；在意就 @supports 双写 `cubic-bezier(.34,1.56,.64,1)`
+
+### 支持与降级
+Chrome 113+ / Safari 17.2+ / Firefox 112+。默认降级（回落 ease）通常可接受。
+
+## 53 height:auto 过渡（grid 0fr→1fr / interpolate-size）
+
+### 原理
+手风琴千百年的痛：`height: auto` 不能过渡。两条路：**A. `grid-template-rows: 0fr→1fr`**（全兼容，默认首选）；**B. `interpolate-size: allow-keywords`** 直接让 auto 参与插值（新，代码直白）。
+
+### 适用模块
+- 手风琴 FAQ
+- 展开 / 收起面板
+- 通知卡离场后高度坍缩合洞（㊷ 的纯 CSS 版）
+
+### 不适用
+- ❌ 中途跟手的拖拽展开（Bottom Sheet ㉚ 仍 JS）
+
+### 核心代码
+
+```css
+/* A. 全兼容：grid 0fr→1fr（首选） */
+.acc {
+  display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows .38s cubic-bezier(.32,.72,0,1);
+}
+.acc.open { grid-template-rows: 1fr; }
+.acc > .body { overflow: hidden; min-height: 0; }   /* min-height:0 是灵魂，漏了 0fr 不生效 */
+
+/* B. 新特性：interpolate-size（Chrome 129+） */
+@supports (interpolate-size: allow-keywords) {
+  :root { interpolate-size: allow-keywords; }      /* 必须写 :root，元素上写无效 */
+  .acc-b { height: 0; transition: height .38s cubic-bezier(.32,.72,0,1); }
+  .acc-b.open { height: auto; }
+  /* calc-size(auto, size + 24px) 可在 auto 基础上加余量 */
+}
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| 曲线 | cubic-bezier(.32,.72,0,1) | iOS 展开手感 |
+| duration | 320~420ms | 手风琴标准 |
+| overflow | hidden / clip | 插值期间内容必须裁剪 |
+
+### 避坑
+- ❌ **grid 法忘写 `min-height: 0`** → grid item 默认 `min-height: auto`，0fr 压不下去；这是「不生效」的第一嫌疑
+- ❌ **interpolate-size 写在元素上** → 只在 `:root` 声明才生效
+- ❌ **内容里有未定尺寸图片** → 插值中图片载入会跳变；预留 `aspect-ratio`
+
+### 支持与降级
+grid 法：全浏览器。interpolate-size：Chrome 129+。默认用 A，B 仅作增强。
+
+## 54 锚点定位 Anchor Positioning
+
+### 原理
+`anchor-name` + `position-anchor` + `anchor()` / `position-area`：浮层声明自己锚定谁，浏览器负责定位、间距、**视口贴边自动翻折** —— tooltip / 下拉的 getBoundingClientRect + 翻转逻辑全部退役。
+
+### 适用模块
+- tooltip / hint
+- 下拉菜单跟随触发按钮
+- 表单错误提示锚定字段
+
+### 不适用
+- ❌ 跟手移动的浮层
+- ❌ 拖拽浮出卡片
+
+### 核心代码
+
+```css
+.save-btn { anchor-name: --save; }
+
+/* 降级基线先行：不支持的浏览器按普通 absolute 走（或 JS 定位） */
+.tip { position: absolute; bottom: 130%; left: 50%; translate: -50% 0; }
+
+@supports (anchor-name: --a) {
+  .tip {
+    position-anchor: --save;
+    position-area: top;                            /* 默认在按钮上方 */
+    position-try-fallbacks: flip-block, flip-inline;  /* 贴边自动翻折 */
+    margin-bottom: 8px;
+  }
+  /* 等宽跟随触发元素：width: anchor-size(--save width); */
+}
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| position-area | top / bottom span-right | 常用方位 |
+| fallbacks | flip-block, flip-inline | 视口边缘翻折组合 |
+| 间距 | margin 8px | 用 margin 撑，别用 translate 硬编码 |
+
+### 避坑
+- ❌ **只写增强不写基线** → 不支持的浏览器浮层飞到页面左上角；**先写可用默认态，再 @supports 增强**
+- ❌ **anchor-name 重名** → 同页多个锚点必须唯一命名
+- ❌ **锚定元素被隐藏** → 锚点消失浮层回落 static；隐藏按钮时同步隐藏浮层
+
+### 支持与降级
+Chrome/Edge 125+（其余在途）。需要全浏览器统一行为时用 floating-ui；否则基线 absolute + @supports 增强。
+
+## 55 跨文档 View Transitions（MPA）
+
+### 原理
+⑯ 只覆盖 SPA；`@view-transition { navigation: auto; }` 让**普通多页站**在跳页时也走浏览器原生转场：浏览器截旧页快照 → 拦截导航 → 新页首绘后交叉过渡，共享元素靠两页**同名** `view-transition-name` 无缝飞行。
+
+### 适用模块
+- 多页官网 / 博客（列表页 ↔ 文章页，封面图飞过去）
+- 无框架 SSR 站点
+
+### 不适用
+- ❌ SPA（用 ⑯）
+- ❌ 依赖 POST 数据的跳转（跨文档 VT 只走同源导航）
+
+### 核心代码
+
+```css
+/* 两页都加载的公共 CSS */
+@view-transition { navigation: auto; }
+@media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: none; }
+}
+
+/* 共享元素：列表页与详情页的同一张图同名 */
+.hero-img { view-transition-name: hero-img; }
+::view-transition-old(hero-img), ::view-transition-new(hero-img) { animation-duration: .45s; }
+```
+
+```html
+<!-- 新页：让关键内容先渲染、再放行转场截图，避免快照拍到空白 -->
+<link rel="expect" href="#hero-img" blocking="render">
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| 共享元素 | ≤ 2 个/页 | 每个元素一次截图，多了转场拖沓 |
+| duration | 300~450ms | 默认 250ms 偏快 |
+| rel=expect | hero 元素 | 保证快照时有内容 |
+
+### 避坑
+- ❌ **两页 CSS 不同步** → name 只在一页存在就没有共享飞行，退化为整体淡入淡出（本身可接受）
+- ❌ **忘记 rel="expect"** → 新页没渲染出 hero 就截图，飞入一张空白
+- ❌ **把 bfcache 返回当 bug** → 前进转场、后退瞬时恢复是预期行为
+- ❌ **拿 VT 挡路由逻辑** → VT 不改变导航语义，别当拦截器用
+
+### 支持与降级
+Chrome/Edge 126+；Firefox/Safari 以 caniuse 实查。不支持 = 普通跳页，零成本降级。
+
+## 56 滚动标记 ::scroll-marker（实验性）
+
+### 原理
+CSS Scroll Markers：横向 snap 轨道的每个 item 生成一个 `::scroll-marker` 伪元素，自动汇入容器的 `::scroll-marker-group`，浏览器自动高亮当前 snap 项 —— 轮播圆点的 JS 同步逻辑归零。
+
+### 适用模块
+- 横滑卡片轨道指示点
+- 全屏 onboarding 分页点
+
+### 不适用
+- ❌ 需要点击跳转的点（当前 spec 点位不可交互；等 stable 再上生产）
+
+### 核心代码
+
+```css
+.track { overflow-x: auto; scroll-snap-type: x mandatory; }
+.track::scroll-marker-group {
+  display: flex; gap: 8px; justify-content: center;
+  position: fixed; bottom: 16px; inset-inline: 0;
+}
+.track .card::scroll-marker {
+  content: ""; width: 8px; height: 8px; border-radius: 50%;
+  background: rgb(255 255 255 / .3);
+  transition: background .3s, scale .3s;
+}
+@supports selector(::scroll-marker) {
+  /* 选中态选择器以当前 spec 为准（下例按 :target-current 写），
+     上线前对照 MDN 复核 —— 本模式整体标记为实验性 */
+  .track .card:target-current::scroll-marker { background: var(--accent); scale: 1.25; }
+}
+```
+
+### 调参指南
+
+| 参数 | 推荐值 | 说明 |
+|------|--------|------|
+| 点径 | 6~8px | 8px 以上像儿童 UI |
+| 高亮 | 变色 + scale 1.25 | 双通道提示 |
+
+### 避坑
+- ❌ **当稳定特性上生产** → 仅最新 Chromium 有；生产用 IO 点位方案兜底（㉘ 同款）
+- ❌ **marker-group 忘了定位** → 默认渲染在轨道流末尾
+
+### 支持与降级
+Chrome 133+。`@supports selector(::scroll-marker)` 探测；降级 = 现有 JS 指示点方案。
+
+## 附：渲染层前沿速览（选型时知道有这些，暂不进正式模式）
+
+| 技术 | 一句话 | 何时用 | 代价 |
+|------|--------|--------|------|
+| **SDF 着色器转场** | WebGL fragment shader 用 signed distance field 混合两张纹理，dissolve / blob 转场 | 高端官网 hero 切换、作品集封面 | 需 shader 功底；纹理尺寸规整；fallback fade |
+| **液态玻璃折射** | backdrop-filter blur + SVG feDisplacementMap 位移贴图，玻璃边缘折射（Apple Liquid Glass 风） | iOS 26 风组件、dock、工具条 | feDisplacementMap 每帧重采样贵，控制在小面积 |
+| **可变字体动效** | font-variation-settings 的 wght/wdth 轴随滚动或 hover 插值，字重「呼吸」 | 品牌大标题、编辑部风落地页 | 变量字体体积；只有数值轴可插值 |
+| **WebGPU 粒子** | compute shader + 存储缓冲跑百万级粒子，repulsion / curl noise 全在 GPU | 压轴级 hero、生成艺术背景 | WebGPU 覆盖率不足，需 WebGL fallback 双写 |
+
+> 决策口径：这些属于「预算充足 + 明确要压轴效果」的选项；日常界面升级优先 49–56 的 CSS 原生方案。
+
+---
+
 ## 附：移动端手感三定律（㉖-㉜ 总纲）
 
 1. **跟手优先**：任何拖拽，松手前 `transition: none` 1:1 跟随；松手后才上曲线

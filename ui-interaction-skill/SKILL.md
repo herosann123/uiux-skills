@@ -1,10 +1,10 @@
 ---
 name: ui-interaction-skill
-description: 选择并实现高级 UI 交互模式（视差 / 滚动触发 / 卡片堆叠 / 磁吸 / 文字揭示 / SVG 路径 / 弹性 / 数字翻牌 / 3D 倾斜 / 玻璃拟态 / 极光渐变 / 粒子网络 / 水波纹 / 粘性滚动 / FLIP 共享元素 / View Transitions / AI 流式打字机 / 千层酥抽拉），外加 7 种手机端手感模式（原生手感滚动 snap / 滑动返回 / Tab 滑动切换 / 页面推入推出 push-pop / Bottom Sheet 底部抽屉 / 列表滑动操作 / 触感反馈）。基于 UI 模块类型（Hero、卡片、按钮、计数器、加载、弹窗、Onboarding、AI 对话气泡、移动端路由/列表等）从映射表 lookup 推荐模式，给出可直接复用的代码模板与避坑指南。
+description: 选择并实现高级 UI 交互模式（视差 / 滚动触发 / 卡片堆叠 / 磁吸 / 文字揭示 / SVG 路径 / 弹性 / 数字翻牌 / 3D 倾斜 / 玻璃拟态 / 极光渐变 / 粒子网络 / 水波纹 / 粘性滚动 / FLIP 共享元素 / View Transitions / AI 流式打字机 / 千层酥抽拉），外加 7 种手机端手感模式（原生手感滚动 snap / 滑动返回 / Tab 滑动切换 / 页面推入推出 push-pop / Bottom Sheet 底部抽屉 / 列表滑动操作 / 触感反馈），以及 8 种前沿 CSS 原生动效（滚动驱动动画 / @starting-style 进出场 / Popover API / linear() 弹簧缓动 / height:auto 过渡 / 锚点定位 / 跨文档 View Transitions / 滚动标记）。基于 UI 模块类型（Hero、卡片、按钮、计数器、加载、弹窗、Onboarding、AI 对话气泡、移动端路由/列表等）从映射表 lookup 推荐模式，给出可直接复用的代码模板与避坑指南。
 type: design-pattern
-version: 2.4.0
+version: 2.5.0
 user-invocable: true
-argument-hint: "[module] [pattern-id 1-25+m] [--html] [--code-only]"
+argument-hint: "[module] [pattern-id] [--html] [--code-only]"
 license: MIT
 trigger:
   - 正在设计 UI 动效 / 交互动画 / 视觉运动
@@ -27,8 +27,8 @@ allowed-tools:
 
 # UI 交互 Skill · 高级模式选择与实现
 
-> 25 种核心交互模式 + 15 种移动端手感/高级手感模式 + 8 种移动端组件与情绪模式 + 模块级映射表 + 决策树。
-> 配套 demo：`./10-ui-interactions.html`（①-⑩）+ `./advanced-ui-v2.html`（⑪-⑰）+ `./advanced-ui-v3.html`（⑱-㉕）+ `./mobile-ui.html`（㉖-㉜ 手机端试玩）+ `./mobile-ui-pro.html`（㉝-㊵ 高级手感试玩）+ `./mobile-ui-plus.html`（㊶-㊽ 组件与情绪试玩）
+> 25 种核心交互模式 + 15 种移动端手感/高级手感模式 + 8 种移动端组件与情绪模式 + 8 种前沿 CSS 原生动效 + 模块级映射表 + 决策树。
+> 配套 demo：`./10-ui-interactions.html`（①-⑩）+ `./advanced-ui-v2.html`（⑪-⑰）+ `./advanced-ui-v3.html`（⑱-㉕）+ `./mobile-ui.html`（㉖-㉜ 手机端试玩）+ `./mobile-ui-pro.html`（㉝-㊵ 高级手感试玩）+ `./mobile-ui-plus.html`（㊶-㊽ 组件与情绪试玩）+ `./frontier-css.html`（49-56 前沿 CSS 原生，渐进增强）
 > 配套技术手册：`./PATTERNS.md`（每种模式的完整代码模板 + 调参指南）
 
 ---
@@ -48,7 +48,7 @@ allowed-tools:
 **用户可能的输入**：
 - `/ui-interaction-skill hero` → 给 Hero 推荐方案
 - `/ui-interaction-skill 按钮 磁吸` → 为按钮找磁吸实现
-- `/ui-interaction-skill --html` → 给所有 24 个 demo 的 HTML
+- `/ui-interaction-skill --html` → 给所有 demo 页的 HTML
 - `/ui-interaction-skill ㉑` → 解释模式 ㉑ 并给完整代码
 
 ---
@@ -269,6 +269,21 @@ Pointer  光标     ⑨ 3D 倾斜                  ⑩ 玻璃
 | **消息/购物车角标** | ㊼ 角标弹跳 | 1.35 回弹 + 颜色脉冲；void offsetWidth retrigger | ⑧ 翻牌 | tabular-nums；连击合并 bump；配 aria-live |
 | **支付/发布成功** | ㊽ 庆祝粒子 | Canvas 130 粒从触点抛出；pointer-events:none | toast | 每用户流 ≤1 处；常规成功只 toast |
 
+### 3.9 ★ 前沿 CSS 原生动效（49–56，渐进增强层）
+
+> 2023–2025 落地的 CSS 原生动画能力，定位是「同类 JS 模式的现代替代/增强」。新项目且浏览器基线允许时**优先推荐本档**（代码量、性能、可维护性全面占优）；老项目按 @supports 渐进增强。发布前 caniuse 复核支持度。
+
+| UI 模块 | 推荐模式 | 关键参数 | 替代的旧方案 | 注意事项 |
+|---------|---------|---------|------|---------|
+| **滚动 reveal / 进度条 / 视差** | 49 滚动驱动动画 | range entry 60%；fill both | ② ① ㉒ 的 JS 版 | 初始态只写 keyframes from；@supports 包裹 |
+| **弹层/dialog/toast 进出场** | 50 @starting-style | 280~360ms；(.32,.72,0,1) | JS class 切换 | 四条 transition 都要列（含 display/overlay） |
+| **下拉菜单 / tooltip / 非阻塞通知** | 51 Popover API | auto；manual=常驻 | 手写 modal 脚手架 | 阻塞式确认仍用 dialog+showModal |
+| **hover / 指示器落位弹簧** | 52 linear() | 过冲 1.15~1.25；450~650ms | ⑦（非跟手场景） | 拖拽松手回弹仍用 ⑦ rAF |
+| **手风琴 / 展开-收起** | 53 grid 0fr→1fr | .38s；min-height:0 | max-height 999px hack | interpolate-size 仅 Chrome，默认用 grid 法 |
+| **tooltip / 下拉跟随定位** | 54 锚点定位 | flip-block + flip-inline | JS 计算 + floating-ui | 先写降级基线再 @supports 增强 |
+| **多页站列表 ↔ 详情转场** | 55 跨文档 VT | 共享元素 ≤2/页；rel=expect | ⑮ FLIP / 整页白屏跳转 | SPA 用 ⑯；两页同步 view-transition-name |
+| **轮播 / snap 轨道指示点** | 56 scroll-marker | 点径 6~8px | JS 点位同步（IO 方案） | 实验性，生产用 IO 兜底 |
+
 ---
 
 ## 5. 模式速查表（详见 PATTERNS.md）
@@ -323,6 +338,14 @@ Pointer  光标     ⑨ 3D 倾斜                  ⑩ 玻璃
 | ㊻ | **骨架屏 Shimmer** | transform 扫光 + 骨架与内容逐像素同尺寸 + 完成重叠过渡 | 周期 1.4s；完成 0.3s 淡入上移 | ⭐ |
 | ㊼ | **角标弹跳 Badge Bump** | 数字变化 scale 1.35 回弹 + 颜色脉冲 + 「+N」飞出；void offsetWidth retrigger | 1.35 回弹；+N 只在 delta≥2 | ⭐ |
 | ㊽ | **庆祝粒子 Confetti** | Canvas 100~150 emoji 从触发点抛出，重力 0.35，落完自动停 rAF | 130 粒；每用户流只 1 处 | ⭐⭐ |
+| 49 | **滚动驱动动画** | animation-timeline: view()/scroll()，滚动进度即动画进度 | range entry 60%；fill both | ⭐ |
+| 50 | **@starting-style 进出场** | 声明首帧样式 + allow-discrete 让 display 可过渡 | 280~360ms；四条 transition | ⭐ |
+| 51 | **Popover API** | top layer 弹层，Esc/外点自动关，零 JS | auto / manual | ⭐ |
+| 52 | **linear() 弹簧** | 弹簧曲线采样点编码进 CSS 缓动 | 过冲 1.15~1.25；450~650ms | ⭐ |
+| 53 | **height:auto 过渡** | grid-template-rows 0fr→1fr（或 interpolate-size） | .38s；min-height:0 | ⭐ |
+| 54 | **锚点定位** | position-anchor + anchor()/position-area 自动翻折 | flip-block + flip-inline | ⭐ |
+| 55 | **跨文档 VT** | @view-transition navigation:auto，MPA 共享元素转场 | 共享元素 ≤2/页；rel=expect | ⭐⭐ |
+| 56 | **滚动标记** | ::scroll-marker 自动生成轮播指示点（实验性） | 点径 6~8px | ⭐ |
 
 ---
 
@@ -348,6 +371,8 @@ Pointer  光标     ⑨ 3D 倾斜                  ⑩ 玻璃
 | **Data Story Scroll** | ㉒ 滚动驱动数字 + ⑭ 粘性堆叠 + ⑳ 噪点 | 财报页 / 数据长图 / 年度回顾 |
 | **Liquid Showcase** | ㉔ Blob Morph + ⑰ 流式打字机 + ⑲ H-Scroll | Stripe 风落地 / Loading / 空状态 |
 | **Color Card Stack** | ㉕ Folding Drawer + ⑤ 揭示（顶卡标题） + ⑧ 翻牌（counter） | 配色面板 / 设计系统色卡 / 主题浏览 |
+| **Modern Native Stack** | 51 Popover（载体） + 50 @starting-style（进出场） + 54 锚点（定位） | 零 JS 现代弹层（新项目默认） |
+| **MPA Flight** | 55 跨文档 VT（列表↔详情共享元素） + 49 滚动驱动（文内 reveal） | 博客 / 官网类多页站 |
 | **Native App Feel**（手机） | ㉙ push/pop（路由） + ㉗ 滑动返回 + ㉜ 触感（按钮） | 类原生手机 WebApp 的骨架 |
 | **Mobile Feed Premium**（手机） | ㉖ snap 轨道（横滑区） + ㉛ 滑动操作（列表） + ㉜ 按压（CTA） | 首页信息流 |
 | **Map / POI App**（手机） | ㉚ Bottom Sheet + ㉖ snap（卡片轨道） + ⑩ 玻璃（顶栏） | 地图、外卖、点评 |

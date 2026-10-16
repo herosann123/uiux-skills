@@ -1,6 +1,6 @@
 # 快速索引 · UI 交互模式
 
-> 48 种交互模式的一行速查（基础 10 + 进阶 7 + 前沿 8 + 移动端 7 + 高级移动端 8 + 组件情绪 8）。
+> 56 种交互模式的一行速查（基础 10 + 进阶 7 + 前沿 8 + 移动端 7 + 高级移动端 8 + 组件情绪 8 + 前沿 CSS 原生 8）。
 > 主文档：`SKILL.md` · 完整代码：`PATTERNS.md`
 
 ---
@@ -83,6 +83,21 @@
 | ㊼ | 角标弹跳 Badge Bump | scale 1.35 回弹 + 「+N」飞出 | 消息/购物车角标 |
 | ㊽ | 庆祝粒子 Confetti | Canvas emoji 从触点抛出 | 支付/发布成功 |
 
+## 前沿 CSS 原生 8 种（demo: `frontier-css.html`，49–56 号；圈号止于㊿故用数字）
+
+> 2023–2025 落地的 CSS 原生动画能力，定位是「同类 JS 模式的现代替代」；全部 @supports 渐进增强，发布前 caniuse 复核支持度。
+
+| ID | 名称 | 一句话 | 适用场景 |
+|----|------|--------|---------|
+| 49 | 滚动驱动动画 Scroll-Driven | animation-timeline: view()/scroll() 滚动即播放，零 JS | reveal / 进度条 / 视差的纯 CSS 版 |
+| 50 | @starting-style 进出场 | 声明首帧样式 + allow-discrete，display:none 也能平滑过渡 | dialog / popover / toast 进出场 |
+| 51 | Popover API | top layer 弹层，Esc/外点自动关，零 JS | 下拉菜单 / tooltip / 非阻塞通知 |
+| 52 | linear() 弹簧缓动 | 整条弹簧曲线（含过冲）编码进 CSS | hover / Tab 指示器落位 |
+| 53 | height:auto 过渡 | grid 0fr→1fr（全兼容）或 interpolate-size | 手风琴 / 展开收起 |
+| 54 | 锚点定位 Anchor | 浮层锚定元素，贴边自动翻折 | tooltip / 下拉跟随定位 |
+| 55 | 跨文档 View Transitions | @view-transition 让多页站也有共享元素转场 | MPA 列表 ↔ 详情 |
+| 56 | 滚动标记 scroll-marker | 轮播指示点原生生成（实验性） | snap 轨道分页点 |
+
 ---
 
 ## 模块 → 模式 速查
@@ -125,6 +140,12 @@
 | IM 语音 | ㊺ 按住说话 |
 | Feed 加载 | ㊻ 骨架屏 |
 | 支付成功 | ㊽ 庆祝粒子（每流仅 1 处） |
+| 滚动 reveal（新项目） | 49 滚动驱动 CSS（替代 ②） |
+| 弹层/Toast（新项目） | 50 + 51 + 54 现代弹层三件套 |
+| hover 弹簧手感 | 52 linear()（拖拽回弹仍 ⑦） |
+| 手风琴/展开面板 | 53 grid 0fr→1fr |
+| 多页站列表↔详情 | 55 跨文档 VT / SPA 用 ⑯ |
+| 轮播指示点 | 56（生产先 IO 兜底） |
 
 ---
 
@@ -193,7 +214,7 @@
 ```
 ui-interaction-skill/
 ├── SKILL.md                          # 主入口（agent 读这个）
-├── PATTERNS.md                       # 48 种模式完整代码模板
+├── PATTERNS.md                       # 56 种模式完整代码模板
 ├── INDEX.md                          # 本文件（速查）
 ├── evals/scenarios.md                # 对抗性测试场景（v2.1）
 ├── ui-visual-skill/                  # 姊妹 skill：字体排版与配色质感
@@ -210,5 +231,6 @@ ui-interaction-skill/
 ├── advanced-ui-v3.html               # 前沿 7 种 demo
 ├── mobile-ui.html                    # 移动端手感 7 种 demo（手机试玩）
 ├── mobile-ui-pro.html                # 高级移动端手感 8 种 demo（手机试玩）
-└── mobile-ui-plus.html               # 移动端组件与情绪 8 种 demo（手机试玩）
+├── mobile-ui-plus.html               # 移动端组件与情绪 8 种 demo（手机试玩）
+└── frontier-css.html                 # 前沿 CSS 原生 8 种 demo（49-56，渐进增强）
 ```
